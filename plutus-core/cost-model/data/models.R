@@ -89,9 +89,14 @@ get.bench.data <- function(path) {
         mutate(across(c("Mean", "MeanLB", "MeanUB", "Stddev", "StddevLB", "StddevUB"), seconds.to.milliseconds))
 }
 
+#discard.overhead <- function(frame, overhead) {
+#    mutate(frame,across(c("Mean", "MeanLB", "MeanUB"), function(x) { x-overhead }))
+#}
+
 discard.overhead <- function(frame, overhead) {
-    mutate(frame,across(c("Mean", "MeanLB", "MeanUB"), function(x) { x-overhead }))
+    frame
 }
+
 
 adjustModel <- function (m, fname) {
     ## Given a linear model, check its coefficients and if any is negative then

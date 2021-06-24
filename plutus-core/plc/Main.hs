@@ -785,6 +785,8 @@ printBudgetStateTally term model (Cek.CekExTally costs) = do
           putStrLn ""
           putStrLn $ "Total budget spent: " ++ printf (budgetToString totalCost)
           putStrLn $ "Predicted execution time: " ++ (formatTime_picoseconds totalTime)
+          putStrLn $ "Builtins account for " ++ printf "%.2f%%" (100*(getCPU builtinCosts) / (getCPU totalCost))
+                       ++ " of the total predicted execution time"
     Unit -> pure ()
   where
         getSpent k =
