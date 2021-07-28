@@ -12,6 +12,7 @@ module Main (main) where
 import qualified Prelude                                  as Haskell
 
 import           PlutusCore
+import qualified PlutusCore.Pretty                        as PP
 import qualified PlutusTx                                 as Tx
 import           PlutusTx.Prelude                         as Tx
 import           UntypedPlutusCore                        as UPLC
@@ -74,9 +75,13 @@ zipl (x:xs) (y:ys) = x:y:(zipl xs ys)
 go :: Integer -> [()]
 go n = zipl (mkList n) (rev $ mkList n)
 
+
+mkListProg :: Integer -> UPLC.Program NamedDeBruijn DefaultUni DefaultFun ()
+mkListProg n = Tx.getPlc $ $$(Tx.compile [|| go ||]) `Tx.applyCode` Tx.liftCode n
+
 mkListTerm :: Integer -> UPLC.Term NamedDeBruijn DefaultUni DefaultFun ()
 mkListTerm n =
-  let (UPLC.Program _ _ code) = Tx.getPlc $ $$(Tx.compile [|| go ||]) `Tx.applyCode` Tx.liftCode n
+  let (UPLC.Program _ _ code) = mkListProg n
   in code
 
 mkListBM :: Integer -> Benchmark
@@ -85,20 +90,15 @@ mkListBM n = bench (Haskell.show n) $ benchCek (mkListTerm n)
 mkListBMs :: [Integer] -> Benchmark
 mkListBMs ns = bgroup "List" [mkListBM n | n <- ns]
 
+writePlc :: UPLC.Program NamedDeBruijn DefaultUni DefaultFun () -> Haskell.IO ()
+writePlc prog =  Haskell.print . PP.prettyPlcClassicDebug $ prog
 
-
-writeCBOR :: Haskell.IO ()
-writeCBOR =
-  let prog = Tx.getPlc $ $$(Tx.compile [|| go ||]) `Tx.applyCode` Tx.liftCode 999
-      bs = case runExcept @UPLC.FreeVariableError $ runQuoteT $ UPLC.unDeBruijnProgram prog of
-             Left e  -> throw e
-             Right t -> UPLC.serialiseOmittingUnits t
-  in  BSL.putStr bs
--- main :: Haskell.IO ()
--- main = defaultMainWith (defaultConfig { C.csvFile = Just "cek-lists.csv" }) $ [mkListBMs [0,10..1000]]
 
 main :: Haskell.IO ()
-main = writeCBOR
+main = defaultMainWith (defaultConfig { C.csvFile = Just "cek-lists.csv" }) $ [mkListBMs [0,10..1000]]
+
+-- main :: Haskell.IO ()
+-- main = writePlc (mkListProg 999)
 
 
 {- (t+1e-4)/compute ~ 3.7e-8
