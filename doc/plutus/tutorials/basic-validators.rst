@@ -25,15 +25,15 @@ The ``Data`` type
 But how are the validator's arguments passed?
 At least the redeemer and datum can be of different types depending on the script.
 
-The answer is that we pass them as a generic structured data type :hsobj:`PlutusTx.Data.Data`.
+The answer is that we pass them as a generic structured data type :hsobj:`PlutusCore.Data.Data`.
 ``Data`` is designed to make it easy to encode structured data into it, and to be itself encoded as CBOR.
 
 Consequently, the validator scripts we will write in this tutorial take three arguments of type ``Data``.
 
 However, you will typically not want to use ``Data`` directly in your program, rather you will want to use your own datatypes.
-We can easily convert to and from ``Data`` with the :hsobj:`PlutusTx.IsData.Class.IsData` typeclass.
+We can easily convert to and from ``Data`` with the :hsobj:`PlutusTx.IsData.Class.ToData` and :hsobj:`PlutusTx.IsData.Class.FromData` typeclasses.
 
-You usually don't need to write your own ``IsData`` instances.
+You usually don't need to write your own ``To/FromData`` instances.
 Instead, you can use the ``makeIsData`` Template Haskell function to generate one.
 
 .. literalinclude:: BasicValidators.hs

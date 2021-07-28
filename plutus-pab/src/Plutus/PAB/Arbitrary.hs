@@ -18,7 +18,7 @@ import qualified Ledger.Bytes                      as LedgerBytes
 import           Ledger.Crypto                     (PubKey, PubKeyHash, Signature)
 import           Ledger.Interval                   (Extended, Interval, LowerBound, UpperBound)
 import           Ledger.Slot                       (Slot)
-import           Ledger.Tx                         (Tx, TxIn, TxInType, TxOut, TxOutRef)
+import           Ledger.Tx                         (RedeemerPtr, ScriptTag, Tx, TxIn, TxInType, TxOut, TxOutRef)
 import           Ledger.TxId                       (TxId)
 import           Plutus.Contract.Effects           (ActiveEndpoint (..), PABReq (..), PABResp (..))
 import qualified PlutusTx                          as PlutusTx
@@ -80,6 +80,14 @@ instance Arbitrary TxInType where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
+instance Arbitrary ScriptTag where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary RedeemerPtr where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Value where
     arbitrary = oneof [Aeson.String <$> arbitrary, Aeson.Number <$> arbitrary]
 
@@ -122,6 +130,10 @@ instance Arbitrary Signature where
 instance Arbitrary PlutusTx.Data where
     arbitrary = genericArbitrary
     shrink = genericShrink
+
+instance Arbitrary PlutusTx.BuiltinData where
+    arbitrary = PlutusTx.dataToBuiltinData <$> arbitrary
+    shrink d = PlutusTx.dataToBuiltinData <$> shrink (PlutusTx.builtinDataToData d)
 
 instance Arbitrary Ledger.Datum where
     arbitrary = genericArbitrary
@@ -167,7 +179,9 @@ instance Arbitrary PABReq where
             , UtxoAtReq <$> arbitrary
             , AddressChangeReq <$> arbitrary
             , pure $ OwnPublicKeyReq
-            -- TODO This would need an Arbitrary Tx instance: WriteTxRequest <$> arbitrary
+            -- TODO This would need an Arbitrary Tx instance:
+            -- , BalanceTxRequest <$> arbitrary
+            -- , WriteBalancedTxRequest <$> arbitrary
             ]
 
 instance Arbitrary Address where
@@ -191,7 +205,8 @@ instance Arbitrary ActiveEndpoint where
 -- warning sign around the rabbit hole:
 -- bad :: [Gen ContractRequest]
 -- bad =
---     [ WriteTxRequest <$> arbitrary
+--     [ BalanceTxRequest <$> arbitrary
+--     , WriteBalancedTxRequest <$> arbitrary
 --     , UtxoAtRequest <$> arbitrary
 --     , AddressChangedAtRequest <$> arbitrary
 --     ]

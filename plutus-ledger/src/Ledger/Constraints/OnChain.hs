@@ -11,7 +11,7 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 module Ledger.Constraints.OnChain where
 
-import           PlutusTx                         (IsData (..))
+import           PlutusTx                         (ToData (..))
 import           PlutusTx.Prelude
 
 import           Ledger.Constraints.TxConstraints
@@ -34,12 +34,12 @@ checkOwnInputConstraint ScriptContext{scriptContextTxInfo} InputConstraint{icTxO
 
 {-# INLINABLE checkOwnOutputConstraint #-}
 checkOwnOutputConstraint
-    :: IsData o
+    :: ToData o
     => ScriptContext
     -> OutputConstraint o
     -> Bool
 checkOwnOutputConstraint ctx@ScriptContext{scriptContextTxInfo} OutputConstraint{ocDatum, ocValue} =
-    let hsh = V.findDatumHash (Datum $ toData ocDatum) scriptContextTxInfo
+    let hsh = V.findDatumHash (Datum $ toBuiltinData ocDatum) scriptContextTxInfo
         checkOutput TxOut{txOutValue, txOutDatumHash=Just svh} =
             txOutValue == ocValue && hsh == Just svh
         checkOutput _       = False
@@ -73,7 +73,7 @@ checkTxConstraint ScriptContext{scriptContextTxInfo} = \case
         -- gives us the redeemer's hash, but 'MustSpendScriptOutput' gives
         -- us the full redeemer
         $ isJust (V.findTxInByTxOutRef txOutRef scriptContextTxInfo)
-    MustMintValue mps tn v ->
+    MustMintValue mps _ tn v ->
         traceIfFalse "Value minted not OK"
         $ Value.valueOf (txInfoForge scriptContextTxInfo) (Value.mpsSymbol mps) tn == v
     MustPayToPubKey pk vl ->
@@ -95,7 +95,7 @@ checkTxConstraint ScriptContext{scriptContextTxInfo} = \case
 
 {-# INLINABLE checkScriptContext #-}
 -- | Does the 'ScriptContext' satisfy the constraints?
-checkScriptContext :: forall i o. IsData o => TxConstraints i o -> ScriptContext -> Bool
+checkScriptContext :: forall i o. ToData o => TxConstraints i o -> ScriptContext -> Bool
 checkScriptContext TxConstraints{txConstraints, txOwnInputs, txOwnOutputs} ptx =
     traceIfFalse "checkScriptContext failed"
     $ all (checkTxConstraint ptx) txConstraints

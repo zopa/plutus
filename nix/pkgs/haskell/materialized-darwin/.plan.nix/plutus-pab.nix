@@ -47,6 +47,7 @@
           (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
           (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
           (hsPkgs."cardano-crypto" or (errorHandler.buildDepError "cardano-crypto"))
+          (hsPkgs."cardano-ledger-byron" or (errorHandler.buildDepError "cardano-ledger-byron"))
           (hsPkgs."cardano-prelude" or (errorHandler.buildDepError "cardano-prelude"))
           (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
           (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
@@ -60,7 +61,7 @@
           (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
           (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
           (hsPkgs."http-types" or (errorHandler.buildDepError "http-types"))
-          (hsPkgs."io-sim-classes" or (errorHandler.buildDepError "io-sim-classes"))
+          (hsPkgs."io-classes" or (errorHandler.buildDepError "io-classes"))
           (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
           (hsPkgs."memory" or (errorHandler.buildDepError "memory"))
           (hsPkgs."monad-logger" or (errorHandler.buildDepError "monad-logger"))
@@ -70,6 +71,10 @@
           (hsPkgs."newtype-generics" or (errorHandler.buildDepError "newtype-generics"))
           (hsPkgs."nothunks" or (errorHandler.buildDepError "nothunks"))
           (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
+          (hsPkgs."ouroboros-consensus" or (errorHandler.buildDepError "ouroboros-consensus"))
+          (hsPkgs."ouroboros-consensus-byron" or (errorHandler.buildDepError "ouroboros-consensus-byron"))
+          (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
+          (hsPkgs."ouroboros-consensus-cardano" or (errorHandler.buildDepError "ouroboros-consensus-cardano"))
           (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
           (hsPkgs."ouroboros-network-framework" or (errorHandler.buildDepError "ouroboros-network-framework"))
           (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
@@ -90,13 +95,14 @@
           (hsPkgs."servant-websockets" or (errorHandler.buildDepError "servant-websockets"))
           (hsPkgs."stm" or (errorHandler.buildDepError "stm"))
           (hsPkgs."text" or (errorHandler.buildDepError "text"))
-          (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
           (hsPkgs."transformers" or (errorHandler.buildDepError "transformers"))
           (hsPkgs."unliftio-core" or (errorHandler.buildDepError "unliftio-core"))
           (hsPkgs."unordered-containers" or (errorHandler.buildDepError "unordered-containers"))
           (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
           (hsPkgs."vector" or (errorHandler.buildDepError "vector"))
           (hsPkgs."warp" or (errorHandler.buildDepError "warp"))
+          (hsPkgs."wai" or (errorHandler.buildDepError "wai"))
+          (hsPkgs."wai-cors" or (errorHandler.buildDepError "wai-cors"))
           (hsPkgs."Win32-network" or (errorHandler.buildDepError "Win32-network"))
           (hsPkgs."websockets" or (errorHandler.buildDepError "websockets"))
           (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
@@ -108,14 +114,20 @@
           (hsPkgs."exceptions" or (errorHandler.buildDepError "exceptions"))
           (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
           (hsPkgs."time" or (errorHandler.buildDepError "time"))
+          (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
           (hsPkgs."beam-core" or (errorHandler.buildDepError "beam-core"))
           (hsPkgs."beam-sqlite" or (errorHandler.buildDepError "beam-sqlite"))
           (hsPkgs."beam-migrate" or (errorHandler.buildDepError "beam-migrate"))
           (hsPkgs."sqlite-simple" or (errorHandler.buildDepError "sqlite-simple"))
           ];
+        build-tools = [
+          (hsPkgs.buildPackages.cardano-node.components.exes.cardano-node or (pkgs.buildPackages.cardano-node or (errorHandler.buildToolDepError "cardano-node:cardano-node")))
+          (hsPkgs.buildPackages.cardano-cli.components.exes.cardano-cli or (pkgs.buildPackages.cardano-cli or (errorHandler.buildToolDepError "cardano-cli:cardano-cli")))
+          ];
         buildable = true;
         modules = [
           "Servant/Extra"
+          "Cardano/Api/NetworkId/Extra"
           "Cardano/BM/Data/Tracer/Extras"
           "Cardano/Chain"
           "Cardano/ChainIndex/API"
@@ -135,7 +147,8 @@
           "Cardano/Node/Server"
           "Cardano/Node/Types"
           "Cardano/Protocol/Socket/Type"
-          "Cardano/Protocol/Socket/Server"
+          "Cardano/Protocol/Socket/Mock/Server"
+          "Cardano/Protocol/Socket/Mock/Client"
           "Cardano/Protocol/Socket/Client"
           "Cardano/Wallet/API"
           "Cardano/Wallet/Client"
@@ -144,7 +157,6 @@
           "Cardano/Wallet/Types"
           "Control/Monad/Freer/Delay"
           "Control/Concurrent/Availability"
-          "Data/Time/Units/Extra"
           "Plutus/PAB/App"
           "Plutus/PAB/Arbitrary"
           "Plutus/PAB/ContractCLI"
@@ -210,12 +222,12 @@
             (hsPkgs."servant-purescript" or (errorHandler.buildDepError "servant-purescript"))
             (hsPkgs."servant-server" or (errorHandler.buildDepError "servant-server"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
             (hsPkgs."unliftio-core" or (errorHandler.buildDepError "unliftio-core"))
             (hsPkgs."uuid" or (errorHandler.buildDepError "uuid"))
             (hsPkgs."yaml" or (errorHandler.buildDepError "yaml"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."iohk-monitoring" or (errorHandler.buildDepError "iohk-monitoring"))
-            (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
             (hsPkgs."servant-client" or (errorHandler.buildDepError "servant-client"))
             (hsPkgs."contra-tracer" or (errorHandler.buildDepError "contra-tracer"))
             (hsPkgs."lobemo-backend-ekg" or (errorHandler.buildDepError "lobemo-backend-ekg"))
@@ -230,6 +242,7 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
@@ -260,6 +273,7 @@
             (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
             (hsPkgs."plutus-use-cases" or (errorHandler.buildDepError "plutus-use-cases"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
             ];
           buildable = true;
           hsSourceDirs = [ "examples/currency-contract" ];
@@ -277,10 +291,26 @@
             (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
             (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
             (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+            (hsPkgs."time-units" or (errorHandler.buildDepError "time-units"))
             ];
           buildable = true;
           modules = [ "AtomicSwap" ];
           hsSourceDirs = [ "examples/atomic-swap-contract" ];
+          mainPath = [ "Main.hs" ];
+          };
+        "plutus-wait-for-tx" = {
+          depends = [
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            (hsPkgs."aeson" or (errorHandler.buildDepError "aeson"))
+            (hsPkgs."playground-common" or (errorHandler.buildDepError "playground-common"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-ledger-api" or (errorHandler.buildDepError "plutus-ledger-api"))
+            (hsPkgs."plutus-contract" or (errorHandler.buildDepError "plutus-contract"))
+            ];
+          buildable = true;
+          hsSourceDirs = [ "examples/wait-for-tx" ];
           mainPath = [ "Main.hs" ];
           };
         "plutus-pay-to-wallet" = {
@@ -307,6 +337,7 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
@@ -420,6 +451,27 @@
             "Main.hs"
             ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
           };
+        "sync-client" = {
+          depends = [
+            (hsPkgs."base" or (errorHandler.buildDepError "base"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
+            (hsPkgs."cardano-slotting" or (errorHandler.buildDepError "cardano-slotting"))
+            (hsPkgs."either" or (errorHandler.buildDepError "either"))
+            (hsPkgs."optparse-applicative" or (errorHandler.buildDepError "optparse-applicative"))
+            (hsPkgs."ouroboros-consensus-byron" or (errorHandler.buildDepError "ouroboros-consensus-byron"))
+            (hsPkgs."ouroboros-consensus-cardano" or (errorHandler.buildDepError "ouroboros-consensus-cardano"))
+            (hsPkgs."ouroboros-consensus-shelley" or (errorHandler.buildDepError "ouroboros-consensus-shelley"))
+            (hsPkgs."ouroboros-network" or (errorHandler.buildDepError "ouroboros-network"))
+            (hsPkgs."plutus-ledger" or (errorHandler.buildDepError "plutus-ledger"))
+            (hsPkgs."plutus-pab" or (errorHandler.buildDepError "plutus-pab"))
+            (hsPkgs."text" or (errorHandler.buildDepError "text"))
+            ];
+          buildable = true;
+          hsSourceDirs = [ "sync-client" ];
+          mainPath = [
+            "Main.hs"
+            ] ++ (pkgs.lib).optional (flags.defer-plugin-errors) "";
+          };
         };
       tests = {
         "plutus-pab-test-light" = {
@@ -429,9 +481,11 @@
             (hsPkgs."aeson-pretty" or (errorHandler.buildDepError "aeson-pretty"))
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
+            (hsPkgs."cardano-api" or (errorHandler.buildDepError "cardano-api"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
+            (hsPkgs."hedgehog" or (errorHandler.buildDepError "hedgehog"))
             (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))
             (hsPkgs."http-client-tls" or (errorHandler.buildDepError "http-client-tls"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
@@ -445,6 +499,7 @@
             (hsPkgs."tasty" or (errorHandler.buildDepError "tasty"))
             (hsPkgs."tasty-hunit" or (errorHandler.buildDepError "tasty-hunit"))
             (hsPkgs."smallcheck" or (errorHandler.buildDepError "smallcheck"))
+            (hsPkgs."tasty-hedgehog" or (errorHandler.buildDepError "tasty-hedgehog"))
             (hsPkgs."tasty-smallcheck" or (errorHandler.buildDepError "tasty-smallcheck"))
             (hsPkgs."tasty-quickcheck" or (errorHandler.buildDepError "tasty-quickcheck"))
             (hsPkgs."text" or (errorHandler.buildDepError "text"))
@@ -453,6 +508,7 @@
             ];
           buildable = true;
           modules = [
+            "Cardano/Api/NetworkId/ExtraSpec"
             "Cardano/Metadata/ServerSpec"
             "Cardano/Metadata/TypesSpec"
             "Cardano/Wallet/ServerSpec"
@@ -468,6 +524,7 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."bytestring" or (errorHandler.buildDepError "bytestring"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
+            (hsPkgs."data-default" or (errorHandler.buildDepError "data-default"))
             (hsPkgs."freer-extras" or (errorHandler.buildDepError "freer-extras"))
             (hsPkgs."freer-simple" or (errorHandler.buildDepError "freer-simple"))
             (hsPkgs."http-client" or (errorHandler.buildDepError "http-client"))

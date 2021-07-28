@@ -21,7 +21,7 @@ module Plutus.Contract.Request(
     , waitNSlots
     , awaitTime
     , currentTime
-    , waitNSeconds
+    , waitNMilliSeconds
     -- ** Querying the UTXO set
     , utxoAt
     -- ** Waiting for changes to the UTXO set
@@ -49,14 +49,13 @@ module Plutus.Contract.Request(
     , ownPubKey
     -- ** Submitting transactions
     , submitUnbalancedTx
+    , submitBalancedTx
+    , balanceTx
     , submitTx
     , submitTxConstraints
     , submitTxConstraintsSpending
     , submitTxConstraintsWith
     , submitTxConfirmed
-    -- ** Sending notifications (deprecated)
-    , notifyInstance
-    , notifyInstanceUnsafe
     -- * Etc.
     , ContractRow
     , pabReq
@@ -69,7 +68,6 @@ import qualified Control.Monad.Freer.Error   as E
 import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.Aeson                  as JSON
 import qualified Data.Aeson.Types            as JSON
-import           Data.Foldable               (traverse_)
 import           Data.Proxy                  (Proxy (..))
 import           Data.Row
 import qualified Data.Text                   as Text
@@ -77,8 +75,8 @@ import           Data.Text.Extras            (tshow)
 import           Data.Void                   (Void)
 import           GHC.Natural                 (Natural)
 import           GHC.TypeLits                (Symbol, symbolVal)
-import           Ledger                      (Address, DiffSeconds, OnChainTx (..), POSIXTime, PubKey, Slot, Tx, TxId,
-                                              TxOut (..), TxOutTx (..), Value, fromSeconds, txId)
+import           Ledger                      (Address, DiffMilliSeconds, OnChainTx (..), POSIXTime, PubKey, Slot, Tx,
+                                              TxId, TxOut (..), TxOutTx (..), Value, fromMilliSeconds, txId)
 import           Ledger.AddressMap           (UtxoMap)
 import           Ledger.Constraints          (TxConstraints)
 import           Ledger.Constraints.OffChain (ScriptLookups, UnbalancedTx)
@@ -92,8 +90,7 @@ import           Plutus.Contract.Effects     (ActiveEndpoint (..), PABReq (..), 
 import qualified Plutus.Contract.Effects     as E
 import           Plutus.Contract.Schema      (Input, Output)
 import           Wallet.Types                (AddressChangeRequest (..), AddressChangeResponse (..), ContractInstanceId,
-                                              EndpointDescription (..), EndpointValue (..), Notification (..),
-                                              NotificationError (..), targetSlot)
+                                              EndpointDescription (..), EndpointValue (..), targetSlot)
 
 import           Plutus.Contract.Resumable
 import           Plutus.Contract.Types
@@ -150,7 +147,11 @@ waitNSlots n = do
   c <- currentSlot
   awaitSlot $ c + fromIntegral n
 
--- | Wait until the given time.
+-- | Wait until the slot where the given time falls into and return latest time
+-- we know has passed.
+--
+-- Example: if starting time is 0 and slot length is 3s, then `awaitTime 4`
+-- waits until slot 2 and returns the value `POSIXTime 5`.
 awaitTime ::
     forall w s e.
     ( AsContractError e
@@ -159,7 +160,10 @@ awaitTime ::
     -> Contract w s e POSIXTime
 awaitTime s = pabReq (AwaitTimeReq s) E._AwaitTimeResp
 
--- | Get the current time
+-- | Get the latest time of the current slot.
+--
+-- Example: if slot length is 3s and current slot is 2, then `currentTime`
+-- returns the value `POSIXTime 5`
 currentTime ::
     forall w s e.
     ( AsContractError e
@@ -167,18 +171,21 @@ currentTime ::
     => Contract w s e POSIXTime
 currentTime = pabReq CurrentTimeReq E._CurrentTimeResp
 
--- | Wait for a number of seconds to pass.
+-- | Wait for a number of milliseconds starting at the ending time of the current
+-- slot, and return the latest time we know has passed.
 --
--- Note: Currently, if n < length of a slot, then 'waitNSeconds' has no effect.
-waitNSeconds ::
+-- Example: if starting time is 0, slot length is 3000ms and current slot is 0, then
+-- `waitNMilliSeconds 0` returns the value `POSIXTime 2000` and `waitNMilliSeconds 1000`
+-- returns the value `POSIXTime 5`.
+waitNMilliSeconds ::
   forall w s e.
   ( AsContractError e
   )
-  => DiffSeconds
+  => DiffMilliSeconds
   -> Contract w s e POSIXTime
-waitNSeconds n = do
+waitNMilliSeconds n = do
   t <- currentTime
-  awaitTime $ t + fromSeconds n
+  awaitTime $ t + fromMilliSeconds n
 
 -- | Get the unspent transaction outputs at an address.
 utxoAt ::
@@ -219,7 +226,9 @@ addressChangeRequest ::
     )
     => AddressChangeRequest
     -> Contract w s e AddressChangeResponse
-addressChangeRequest r = pabReq (AddressChangeReq r) E._AddressChangeResp
+addressChangeRequest r = do
+  _ <- awaitSlot (targetSlot r)
+  pabReq (AddressChangeReq r) E._AddressChangeResp
 
 -- | Call 'addresssChangeRequest' for the address in each slot, until at least one
 --   transaction is returned that modifies the address.
@@ -292,37 +301,6 @@ awaitTxConfirmed i = void $ pabReq (AwaitTxConfirmedReq i) E._AwaitTxConfirmedRe
 -- | Get the 'ContractInstanceId' of this instance.
 ownInstanceId :: forall w s e. (AsContractError e) => Contract w s e ContractInstanceId
 ownInstanceId = pabReq OwnContractInstanceIdReq E._OwnContractInstanceIdResp
-
--- | Send a notification to a contract instance.
-notifyInstanceUnsafe :: forall ep w s.
-    ( KnownSymbol ep
-    )
-    => ContractInstanceId
-    -> JSON.Value
-    -> Contract w s NotificationError ()
-notifyInstanceUnsafe i a = do
-    let notification = Notification
-            { notificationContractID = i
-            , notificationContractEndpoint = endpointDescription (Proxy @ep)
-            , notificationContractArg = a
-            }
-    r <- mapError OtherNotificationError
-            $ pabReq (SendNotificationReq notification) E._SendNotificationResp
-    traverse_ throwError r
-
--- | Send a notification to an instance of another contract whose schema
---   is known. (This provides slightly more type-safety than 'notifyInstanceUnsafe')
---
---   TODO: In the future the runtime should check that the contract instance
---   does indeed conform with 'otherSchema'.
-notifyInstance :: forall ep a otherSchema w s.
-    ( HasEndpoint ep a otherSchema
-    , ToJSON a
-    )
-    => ContractInstanceId
-    -> a
-    -> Contract w s NotificationError ()
-notifyInstance i v = notifyInstanceUnsafe @ep i (JSON.toJSON v)
 
 type HasEndpoint l a s =
   ( HasType l (EndpointValue a) (Input s)
@@ -399,9 +377,26 @@ ownPubKey = pabReq OwnPublicKeyReq E._OwnPublicKeyResp
 --    error if balancing or signing failed.
 submitUnbalancedTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e Tx
 -- See Note [Injecting errors into the user's error type]
-submitUnbalancedTx t =
-  let req = pabReq (WriteTxReq t) E._WriteTxResp in
-  req >>= either (throwError . review _WalletError) pure . view E.writeTxResponse
+submitUnbalancedTx utx = do
+  tx <- balanceTx utx
+  submitBalancedTx tx
+
+-- | Send an unbalanced transaction to be balanced. Returns the balanced transaction.
+--    Throws an error if balancing failed.
+balanceTx :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e Tx
+-- See Note [Injecting errors into the user's error type]
+balanceTx t =
+  let req = pabReq (BalanceTxReq t) E._BalanceTxResp in
+  req >>= either (throwError . review _WalletError) pure . view E.balanceTxResponse
+
+-- | Send an balanced transaction to be signed. Returns the ID
+--    of the final transaction when the transaction was submitted. Throws an
+--    error if signing failed.
+submitBalancedTx :: forall w s e. (AsContractError e) => Tx -> Contract w s e Tx
+-- See Note [Injecting errors into the user's error type]
+submitBalancedTx t =
+  let req = pabReq (WriteBalancedTxReq t) E._WriteBalancedTxResp in
+  req >>= either (throwError . review _WalletError) pure . view E.writeBalancedTxResponse
 
 -- | Build a transaction that satisfies the constraints, then submit it to the
 --   network. The constraints do not refer to any typed script inputs or
@@ -418,8 +413,9 @@ submitTx = submitTxConstraintsWith @Void mempty
 --   contract's own public key to solve the constraints.
 submitTxConstraints
   :: forall a w s e.
-  ( PlutusTx.IsData (RedeemerType a)
-  , PlutusTx.IsData (DatumType a)
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
   , AsContractError e
   )
   => TypedValidator a
@@ -431,8 +427,9 @@ submitTxConstraints inst = submitTxConstraintsWith (Constraints.typedValidatorLo
 --   to resolve any input constraints (see 'Ledger.Constraints.TxConstraints.InputConstraint')
 submitTxConstraintsSpending
   :: forall a w s e.
-  ( PlutusTx.IsData (RedeemerType a)
-  , PlutusTx.IsData (DatumType a)
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
   , AsContractError e
   )
   => TypedValidator a
@@ -447,8 +444,9 @@ submitTxConstraintsSpending inst utxo =
 --   network. Using the given constraints.
 submitTxConstraintsWith
   :: forall a w s e.
-  ( PlutusTx.IsData (RedeemerType a)
-  , PlutusTx.IsData (DatumType a)
+  ( PlutusTx.ToData (RedeemerType a)
+  , PlutusTx.FromData (DatumType a)
+  , PlutusTx.ToData (DatumType a)
   , AsContractError e
   )
   => ScriptLookups a
@@ -462,4 +460,3 @@ submitTxConstraintsWith sl constraints = do
 --   confirmed on the ledger before returning.
 submitTxConfirmed :: forall w s e. (AsContractError e) => UnbalancedTx -> Contract w s e ()
 submitTxConfirmed t = submitUnbalancedTx t >>= awaitTxConfirmed . txId
-

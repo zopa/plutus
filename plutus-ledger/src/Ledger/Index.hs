@@ -32,7 +32,11 @@ module Ledger.Index(
     validateTransactionOffChain,
     -- * Script validation events
     ScriptType(..),
-    ScriptValidationEvent(..)
+    ScriptValidationEvent(..),
+    Api.ExBudget(..),
+    Api.ExCPU(..),
+    Api.ExMemory(..),
+    Api.SatInt
     ) where
 
 import           Prelude                          hiding (lookup)
@@ -41,11 +45,13 @@ import           Prelude                          hiding (lookup)
 import           Codec.Serialise                  (Serialise)
 import           Control.DeepSeq                  (NFData)
 import           Control.Lens                     (toListOf, view, (^.))
+import           Control.Lens.Indexed             (iforM_)
 import           Control.Monad
 import           Control.Monad.Except             (ExceptT, MonadError (..), runExcept, runExceptT)
 import           Control.Monad.Reader             (MonadReader (..), ReaderT (..), ask)
 import           Control.Monad.Writer             (MonadWriter, Writer, runWriter, tell)
 import           Data.Aeson                       (FromJSON, ToJSON)
+import           Data.Default                     (Default (def))
 import           Data.Foldable                    (asum, fold, foldl', traverse_)
 import qualified Data.Map                         as Map
 import qualified Data.Set                         as Set
@@ -56,6 +62,7 @@ import           Ledger.Blockchain
 import qualified Ledger.TimeSlot                  as TimeSlot
 import qualified Plutus.V1.Ledger.Ada             as Ada
 import           Plutus.V1.Ledger.Address
+import qualified Plutus.V1.Ledger.Api             as Api
 import           Plutus.V1.Ledger.Contexts        (ScriptContext (..), ScriptPurpose (..), TxInfo (..))
 import qualified Plutus.V1.Ledger.Contexts        as Validation
 import           Plutus.V1.Ledger.Credential      (Credential (..))
@@ -67,7 +74,7 @@ import qualified Plutus.V1.Ledger.Slot            as Slot
 import           Plutus.V1.Ledger.Tx
 import           Plutus.V1.Ledger.TxId
 import qualified Plutus.V1.Ledger.Value           as V
-import           PlutusTx                         (toData)
+import           PlutusTx                         (toBuiltinData)
 import qualified PlutusTx.Numeric                 as P
 
 -- | Context for validating transactions. We need access to the unspent
@@ -113,6 +120,8 @@ data ValidationError =
     -- ^ For pay-to-script outputs: the validator script provided in the transaction input does not match the hash specified in the transaction output.
     | InvalidDatumHash Datum DatumHash
     -- ^ For pay-to-script outputs: the datum provided in the transaction input does not match the hash specified in the transaction output.
+    | MissingRedeemer RedeemerPtr
+    -- ^ For scripts that take redeemers: no redeemer was provided for this script.
     | InvalidSignature PubKey Signature
     -- ^ For pay-to-pubkey outputs: the signature of the transaction input does not match the public key of the transaction output.
     | ValueNotPreserved V.Value V.Value
@@ -168,6 +177,7 @@ validateTransaction :: ValidationMonad m
 validateTransaction h t = do
     -- Phase 1 validation
     checkSlotRange h t
+    _ <- lkpOutputs $ toListOf (inputs . scriptTxIns) t
 
     -- see note [Minting of Ada]
     emptyUtxoSet <- reader (Map.null . getIndex)
@@ -257,22 +267,22 @@ checkMintingAuthorised tx =
 checkMintingScripts :: forall m . ValidationMonad m => Tx -> m ()
 checkMintingScripts tx = do
     txinfo <- mkTxInfo tx
-    let mpss = Set.toList (txMintScripts tx)
-        mkVd :: Integer -> ScriptContext
-        mkVd i =
-            let cs :: V.CurrencySymbol
-                cs = V.mpsSymbol $ mintingPolicyHash $ mpss !! fromIntegral i
-            in ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
-    forM_ (mpss `zip` (mkVd <$> [0..])) $ \(vl, ptx') ->
-        let vd = Context $ toData ptx'
-            -- HACK: always pass unit as the redeemer. This means that any minting policy that uses a
-            -- different type will fail. To fix this we need to properly track redeemers for minting policies.
-            red = Redeemer $ toData ()
-        in case runExcept $ runMintingPolicyScript vd vl red of
+    iforM_ (Set.toList (txMintScripts tx)) $ \i vl -> do
+        let cs :: V.CurrencySymbol
+            cs = V.mpsSymbol $ mintingPolicyHash vl
+            ctx :: Context
+            ctx = Context $ toBuiltinData $ ScriptContext { scriptContextPurpose = Minting cs, scriptContextTxInfo = txinfo }
+            ptr :: RedeemerPtr
+            ptr = RedeemerPtr Mint (fromIntegral i)
+        red <- case lookupRedeemer tx ptr of
+            Just r  -> pure r
+            Nothing -> throwError $ MissingRedeemer ptr
+
+        case runExcept $ runMintingPolicyScript ctx vl red of
             Left e  -> do
-                tell [mpsValidationEvent vd vl red (Left e)]
+                tell [mpsValidationEvent ctx vl red (Left e)]
                 throwError $ ScriptFailure e
-            res -> tell [mpsValidationEvent vd vl red res]
+            res -> tell [mpsValidationEvent ctx vl red res]
 
 -- | A matching pair of transaction input and transaction output, ensuring that they are of matching types also.
 data InOutMatch =
@@ -322,7 +332,7 @@ checkMatch txinfo = \case
     ScriptMatch txOutRef vl r d -> do
         let
             ptx' = ScriptContext { scriptContextTxInfo = txinfo, scriptContextPurpose = Spending txOutRef }
-            vd = Context (toData ptx')
+            vd = Context (toBuiltinData ptx')
         case runExcept $ runScript vd vl d r of
             Left e -> do
                 tell [validatorScriptValidationEvent vd vl d r (Left e)]
@@ -376,7 +386,7 @@ mkTxInfo tx = do
             , txInfoFee = txFee tx
             , txInfoDCert = [] -- DCerts not supported in emulator
             , txInfoWdrl = [] -- Withdrawals not supported in emulator
-            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange $ txValidRange tx
+            , txInfoValidRange = TimeSlot.slotRangeToPOSIXTimeRange def $ txValidRange tx
             , txInfoSignatories = fmap pubKeyHash $ Map.keys (tx ^. signatures)
             , txInfoData = Map.toList (tx ^. datumWitnesses)
             , txInfoId = txId tx
@@ -397,13 +407,19 @@ data ScriptType = ValidatorScript | MintingPolicyScript
 data ScriptValidationEvent =
     ScriptValidationEvent
         { sveScript :: Script -- ^ The script applied to all arguments
-        , sveResult :: Either ScriptError [String] -- ^ Result of running the script: an error or the trace logs
+        , sveResult :: Either ScriptError (Api.ExBudget, [String]) -- ^ Result of running the script: an error or the 'ExBudget' and trace logs
         , sveType   :: ScriptType -- ^ What type of script it was
         }
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
-validatorScriptValidationEvent :: Context -> Validator -> Datum -> Redeemer -> Either ScriptError [String] -> ScriptValidationEvent
+validatorScriptValidationEvent
+    :: Context
+    -> Validator
+    -> Datum
+    -> Redeemer
+    -> Either ScriptError (Api.ExBudget, [String])
+    -> ScriptValidationEvent
 validatorScriptValidationEvent ctx validator datum redeemer result =
     ScriptValidationEvent
         { sveScript = applyValidator ctx validator datum redeemer
@@ -411,7 +427,12 @@ validatorScriptValidationEvent ctx validator datum redeemer result =
         , sveType = ValidatorScript
         }
 
-mpsValidationEvent :: Context -> MintingPolicy -> Redeemer -> Either ScriptError [String] -> ScriptValidationEvent
+mpsValidationEvent
+    :: Context
+    -> MintingPolicy
+    -> Redeemer
+    -> Either ScriptError (Api.ExBudget, [String])
+    -> ScriptValidationEvent
 mpsValidationEvent ctx mps red result =
     ScriptValidationEvent
         { sveScript = applyMintingPolicyScript ctx mps red

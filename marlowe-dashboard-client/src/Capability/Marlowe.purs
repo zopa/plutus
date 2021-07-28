@@ -42,16 +42,18 @@ import Data.Map (Map, findMin, fromFoldable, lookup, mapMaybeWithKey, singleton,
 import Data.Map (filter) as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (unwrap)
+import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple, snd)
 import Data.Tuple.Nested ((/\))
 import Data.UUID (genUUID, parseUUID, toString)
+import Effect.Aff (delay)
 import Effect.Class (liftEffect)
 import Effect.Random (random)
 import Env (DataProvider(..), PABType(..))
 import Foreign (MultipleErrors)
 import Foreign.Generic (decodeJSON)
-import Halogen (HalogenM)
+import Halogen (HalogenM, liftAff)
 import MainFrame.Types (Msg)
 import Marlowe.PAB (ContractHistory, MarloweData, MarloweParams, PlutusApp(..), PlutusAppId(..), plutusAppPath, plutusAppType)
 import Marlowe.Semantics (Assets(..), Contract, TokenName, TransactionInput(..), asset, emptyState)
@@ -177,7 +179,7 @@ instance monadMarloweAppM :: ManageMarlowe AppM where
               -- and you can have several follower apps (with different PlutusAppIds) all following the same contract
               -- (identified by its MarloweParams). For the LocalStorage simlation we just have one follower app for
               -- each contract, and make its PlutusAppId a function of the MarloweParams. I thought this would be
-              -- simpler, but it turned out to lead to a complication (see note [PendingContracts] in Play.State).
+              -- simpler, but it turned out to lead to a complication (see note [PendingContracts] in Dashboard.State).
               -- I'm not going to change it now though, because this LocalStorage stuff is temporary anyway, and will
               -- be removed when the PAB is working fully.
               mUuid = parseUUID marloweParams.rolePayoutValidatorHash
@@ -292,6 +294,9 @@ instance monadMarloweAppM :: ManageMarlowe AppM where
             WithMarloweContracts -> Contract.invokeEndpoint MarloweApp marloweAppId "apply-inputs" (marloweParams /\ Just interval /\ inputs)
       LocalStorage -> do
         existingContracts <- getContracts
+        -- When we emulate these calls we add a 500ms delay so we give time to the submit button
+        -- to show a loading indicator (we'll remove this once the PAB is connected)
+        liftAff $ delay $ Milliseconds 500.0
         case lookup marloweParams existingContracts of
           Just (marloweData /\ transactionInputs) -> do
             void $ insertContract marloweParams (marloweData /\ (transactionInputs <> [ transactionInput ]))

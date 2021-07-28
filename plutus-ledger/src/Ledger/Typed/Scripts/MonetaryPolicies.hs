@@ -9,6 +9,7 @@
 {-# OPTIONS_GHC -fno-strictness #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 module Ledger.Typed.Scripts.MonetaryPolicies (
     WrappedMintingPolicyType
     , wrapMintingPolicy
@@ -29,17 +30,17 @@ import           Plutus.V1.Ledger.Tx         (TxOut (..))
 
 import           Ledger.Typed.TypeUtils
 
-type WrappedMintingPolicyType = Data -> Data -> ()
+type WrappedMintingPolicyType = BuiltinData -> BuiltinData -> ()
 
--- TODO: in due course when we have monetary policies with redeemers we should add a TypedMintingPolicy interface here
+-- TODO: we should add a TypedMintingPolicy interface here
 
 {-# INLINABLE wrapMintingPolicy #-}
 wrapMintingPolicy
-    :: IsData r
+    :: UnsafeFromData r
     => (r -> Validation.ScriptContext -> Bool)
     -> WrappedMintingPolicyType
-wrapMintingPolicy f (fromData -> Just r) (fromData -> Just p) = check $ f r p
-wrapMintingPolicy _ _                    _                    = check False
+-- We can use unsafeFromBuiltinData here as we would fail immediately anyway if parsing failed
+wrapMintingPolicy f r p = check $ f (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
 
 -- | A minting policy that checks whether the validator script was run
 --   in the minting transaction.

@@ -8,35 +8,32 @@ module Main
 
 import           PlutusPrelude
 
-import qualified Check.Spec                             as Check
+import qualified Check.Spec                        as Check
 import           CostModelInterface.Spec
-import           Evaluation.Spec                        (test_evaluation)
+import           Evaluation.Spec                   (test_evaluation)
 import           Normalization.Check
 import           Normalization.Type
 import           Pretty.Readable
-import           TypeSynthesis.Spec                     (test_typecheck)
+import           TypeSynthesis.Spec                (test_typecheck)
 
 import           PlutusCore
 import           PlutusCore.DeBruijn
-import           PlutusCore.Evaluation.Machine.ExMemory
 import           PlutusCore.Generators
-import           PlutusCore.Generators.AST              as AST
+import           PlutusCore.Generators.AST         as AST
 import           PlutusCore.Generators.Interesting
-import qualified PlutusCore.Generators.NEAT.Spec        as NEAT
+import qualified PlutusCore.Generators.NEAT.Spec   as NEAT
 import           PlutusCore.MkPlc
 import           PlutusCore.Pretty
 
-import           Codec.Serialise
 import           Control.Monad.Except
-import qualified Data.ByteString.Lazy                   as BSL
-import           Data.Int                               (Int64)
-import qualified Data.Text                              as T
-import           Data.Text.Encoding                     (encodeUtf8)
-import           Flat                                   (flat)
+import qualified Data.ByteString.Lazy              as BSL
+import qualified Data.Text                         as T
+import           Data.Text.Encoding                (encodeUtf8)
+import           Flat                              (flat)
 import qualified Flat
-import           Hedgehog                               hiding (Var)
-import qualified Hedgehog.Gen                           as Gen
-import qualified Hedgehog.Range                         as Range
+import           Hedgehog                          hiding (Var)
+import qualified Hedgehog.Gen                      as Gen
+import qualified Hedgehog.Range                    as Range
 import           Test.Tasty
 import           Test.Tasty.Golden
 import           Test.Tasty.HUnit
@@ -94,11 +91,6 @@ newtype TextualProgram a = TextualProgram { unTextualProgram :: Program TyName N
 
 instance Eq a => Eq (TextualProgram a) where
     (TextualProgram p1) == (TextualProgram p2) = compareProgram p1 p2
-
-propCBOR :: Property
-propCBOR = property $ do
-    prog <- forAllPretty $ runAstGen genProgram
-    Hedgehog.tripping prog serialise deserialiseOrFail
 
 propFlat :: Property
 propFlat = property $ do
@@ -185,32 +177,6 @@ propParser = property $ do
     Hedgehog.tripping prog (reprint . unTextualProgram)
                 (\p -> fmap (TextualProgram . void) $ runQuote $ runExceptT $ parseProgram @(DefaultError AlexPosn) p)
 
--- | Check that the `uppperIntegerQuotient` function behaves sensibly.  This
--- operates on CostingIntegers (which are either SatInt or Integer), so we have
--- to be a little careful to use generators which work for both and include
--- the SatInt upper bound.
-propUpperIntegerQuotient :: Property
-propUpperIntegerQuotient = withTests 100000 . property $ do
-    a <- forAll $ fromIntegral <$> Gen.choice [uniform, small, largePositive, largeNegative]
-    b <- forAll $ fromIntegral <$> Gen.choice [uniformPositive, smallPositive, largePositive]
-    -- ^ The behaviour isn't specified for b<=0, so we only check strictly positive b.
-    let d = a `upperIntegerQuotient` b
-    Hedgehog.assert $ a <= d*b
-    Hedgehog.assert $ d*b < a+b || a+b == fromIntegral max64
-      -- We really want <, but that can fail for large a with SatInt, eg if a=maxBound and b=1.
-    where min64 = minBound :: Int64
-          max64 = maxBound :: Int64
-          -- A selection of generators to get good coverage including the centre and the extremes.
-          -- The 'constant' Range gives a uniform distribution.  For the default Size, 'linear...'
-          -- ranges appear to give distributions which only include the lower 30% or so of the
-          -- given interval.
-          uniform         = Gen.integral $ Range.constant min64 max64
-          small           = Gen.integral $ Range.constant (-10) 10
-          largeNegative   = Gen.integral $ Range.constant min64 (min64 + 100)
-          largePositive   = Gen.integral $ Range.constant (max64-100) max64
-          uniformPositive = Gen.integral $ Range.constant 1 max64
-          smallPositive   = Gen.integral $ Range.constant 1 10
-
 propRename :: Property
 propRename = property $ do
     prog <- forAllPretty $ runAstGen genProgram
@@ -245,9 +211,7 @@ allTests plcFiles rwFiles typeFiles typeErrorFiles =
     , testCase "lexing constants from small types" testLexConstant
     , testProperty "lexing constants" propLexConstant
     , testProperty "parser round-trip" propParser
-    , testProperty "serialization round-trip (CBOR)" propCBOR
     , testProperty "serialization round-trip (Flat)" propFlat
-    , testProperty "upperIntegerQuotient behaves correctly" propUpperIntegerQuotient
     , testProperty "equality survives renaming" propRename
     , testProperty "equality does not survive mangling" propMangle
     , testGroup "de Bruijn transformation round-trip" $

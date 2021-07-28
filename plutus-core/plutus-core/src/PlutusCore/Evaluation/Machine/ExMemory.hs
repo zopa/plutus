@@ -13,11 +13,10 @@ module PlutusCore.Evaluation.Machine.ExMemory
 , ExCPU(..)
 , GenericExMemoryUsage(..)
 , ExMemoryUsage(..)
-, upperIntegerQuotient  -- Exported for testing
-, Scalable (..)
 ) where
 
 import           PlutusCore.Core
+import           PlutusCore.Data
 import           PlutusCore.Name
 import           PlutusCore.Pretty
 import           PlutusPrelude
@@ -96,42 +95,12 @@ type CostingInteger =
     SatInt
 #endif
 
-{- | Divide one costing integer by another, "rounding upwards".  This is needed
-when we expose costs to the ledger, which will use different (smaller) units.
-Suppose one ledger unit is 1000 real cost units: then if a script costs 12345678
-real units we want that to be converted to 12346 ledger units, since 12345 (as
-given by `div`) would convert to 12345000 real units, which wouldn't be enough
-to run the script.  We want a <= (a `uppperIntegerQuotient` b) * b < a+b for all
-a and for all b>0, except that we may get '==' instead of '<' when we're using
-SatInt and a+b == MaxBound.  The behaviour when b <= 0 is unspecified.
--}
-upperIntegerQuotient :: CostingInteger -> CostingInteger -> CostingInteger
-a `upperIntegerQuotient` b =
-    let (q,r) = a `divMod` b
-    in if r==0 then q else q+1
 
-{- | A class which allows us to scale budget-related quantities upwards and
-downwards by a strictly positive integer factor.  The operations are NOT
-required to be mutually inverse: in the instances for costing integers we
-always have `scaleDown k . scaleUp k = id`, but `scaleDown` loses information
-and so we don't have `scaleUp k (scaleDown k c) = c`; instead (and by design)
-we have `c <= scaleUp k (scaleDown k c) <= c+k` for all c and for all k > 0. -}
-class Scalable a where
-    scaleUp   :: Integer -> a -> a
-    scaleDown :: Integer -> a -> a
-
-checkPositive :: Integer -> a -> a
-checkPositive k r =
-    if k > 0 then r
-    else error $ "Scalable: strictly positive scale factor expected, but found " ++ show k
-
-instance Scalable CostingInteger where
-    scaleUp   k c = checkPositive k $ (fromInteger k) * c
-    scaleDown k c = checkPositive k $ c `upperIntegerQuotient` (fromInteger k)
+-- $(if finiteBitSize (0::SatInt) < 64 then [t|Integer|] else [t|SatInt|])
 
 -- | Counts size in machine words.
 newtype ExMemory = ExMemory CostingInteger
-  deriving (Eq, Ord, Show, Lift)
+  deriving (Eq, Ord, Show, Generic, Lift)
   deriving newtype (Num, NFData)
   deriving (Semigroup, Monoid) via (Sum CostingInteger)
   deriving (FromJSON, ToJSON) via CostingInteger
@@ -143,8 +112,8 @@ instance PrettyBy config ExMemory where
 -- | Counts CPU units in picoseconds: maximum value for SatInt is 2^63 ps, or
 -- appproximately 106 days.
 newtype ExCPU = ExCPU CostingInteger
-  deriving (Eq, Ord, Show, Lift)
-  deriving newtype (Num, NFData, Scalable)
+  deriving (Eq, Ord, Show, Generic, Lift)
+  deriving newtype (Num, NFData)
   deriving (Semigroup, Monoid) via (Sum CostingInteger)
   deriving (FromJSON, ToJSON) via CostingInteger
 instance Pretty ExCPU where
@@ -239,4 +208,12 @@ instance ExMemoryUsage Char where
 instance ExMemoryUsage Bool where
   memoryUsage _ = 1
 
-deriving via GenericExMemoryUsage [a] instance ExMemoryUsage a => ExMemoryUsage [a]
+-- TODO: The generic instance will traverse the list every time, which is bad. We need some sensible
+-- solution here in future.
+instance ExMemoryUsage [a] where
+  memoryUsage _ = 1
+
+-- TODO; The generic instance will traverse the structure every time, which is bad. We need some sensible
+-- solution here in future.
+instance ExMemoryUsage Data where
+  memoryUsage _ = 1

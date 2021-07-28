@@ -1,195 +1,142 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 
 module Cardano.Protocol.Socket.Client where
 
-import qualified Data.ByteString.Lazy                                as LBS
-import           Data.Time.Units                                     (Second, TimeUnit, toMicroseconds)
-import           Data.Void                                           (Void)
-
 import           Control.Concurrent
-import           Control.Concurrent.STM
-import           Control.Monad.Catch                                 (catchAll)
-import           Control.Tracer
+import           Control.Monad.Catch                         (catchAll)
+import           Data.Time.Units                             (Second, TimeUnit, toMicroseconds)
 
-import           Ouroboros.Network.Block                             (Point (..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Client         as ChainSync
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
-
+import           Cardano.Api                                 (BlockInMode (..), CardanoMode, ChainPoint (..),
+                                                              ChainTip (..), ConsensusModeParams (..),
+                                                              LocalChainSyncClient (..), LocalNodeClientProtocols (..),
+                                                              LocalNodeClientProtocolsInMode, LocalNodeConnectInfo (..),
+                                                              connectToLocalNode)
+import           Ledger.TimeSlot                             (SlotConfig, currentSlot)
 import           Ouroboros.Network.IOManager
-import           Ouroboros.Network.Mux
-import           Ouroboros.Network.NodeToNode                        hiding (chainSyncMiniProtocolNum,
-                                                                      txSubmissionMiniProtocolNum)
-import           Ouroboros.Network.Protocol.Handshake.Codec
-import           Ouroboros.Network.Protocol.Handshake.Unversioned
-import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.Snocket
-import           Ouroboros.Network.Socket
+import qualified Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 
-import           Cardano.Protocol.Socket.Type
-import           Ledger                                              (Block, Slot (..), Tx (..))
+import           Cardano.Protocol.Socket.Type                hiding (Tip)
+import           Ledger                                      (Slot (..))
 
-data ChainSyncHandle = ChainSyncHandle
+data ChainSyncHandle event = ChainSyncHandle
     { cshCurrentSlot :: IO Slot
-    , cshHandler     :: Block -> Slot -> IO ()
+    , cshHandler     :: event -> Slot -> IO ()
     }
 
-newtype TxSendHandle = TxSendHandle
-    { tshQueue :: TQueue Tx }
+data ChainSyncEvent =
+    Resume !ChainPoint
+  | RollForward !(BlockInMode CardanoMode)
 
--- | Queue a transaction to be sent to the server.
-queueTx ::
-    TxSendHandle
- -> Tx
- -> IO ()
-queueTx TxSendHandle { tshQueue } tx =
-    atomically (writeTQueue tshQueue tx)
+{- | The `Slot` parameter here represents the `current` slot as computed from the
+     current time. There is also the slot where the block was published, which is
+     available from the `ChainSyncEvent`.
 
-getCurrentSlot :: ChainSyncHandle -> IO Slot
+     Currently we are using this current slot everywhere, which is why I leave it
+     here, as a parameter.
+-}
+type ChainSyncCallback = ChainSyncEvent -> Slot -> IO ()
+
+getCurrentSlot
+  :: forall block.
+     ChainSyncHandle block
+  -> IO Slot
 getCurrentSlot = cshCurrentSlot
 
 -- | Run the chain sync protocol to get access to the current slot number.
-runChainSync' :: FilePath
-              -> SlotConfig
-              -> IO ChainSyncHandle
-runChainSync' socketPath slotConfig =
-  runChainSync socketPath slotConfig (\_ _ -> pure ())
+runChainSync'
+  :: FilePath
+  -> SlotConfig
+  -> [ChainPoint]
+  -> IO (ChainSyncHandle ChainSyncEvent)
+runChainSync' socketPath slotConfig resumePoints =
+  runChainSync socketPath slotConfig resumePoints (\_ _ -> pure ())
 
-runChainSync :: FilePath
-             -> SlotConfig
-             -> (Block -> Slot -> IO ())
-             -> IO ChainSyncHandle
-runChainSync socketPath slotConfig onNewBlock = do
-    let handle = ChainSyncHandle { cshCurrentSlot = currentSlot slotConfig
-                                 , cshHandler = onNewBlock
-                                 }
+runChainSync
+  :: FilePath
+  -> SlotConfig
+  -> [ChainPoint]
+  -> ChainSyncCallback
+  -> IO (ChainSyncHandle ChainSyncEvent)
+runChainSync socketPath slotConfig resumePoints chainSyncEventHandler = do
+    let handle = ChainSyncHandle {
+          cshCurrentSlot = currentSlot slotConfig,
+          cshHandler = chainSyncEventHandler }
 
-    _ <- forkIO $ withIOManager $ loop (1 :: Second) handle
+    _ <- forkIO $ withIOManager $ loop (1 :: Second)
     pure handle
     where
-      loop :: TimeUnit a => a -> ChainSyncHandle -> IOManager -> IO ()
-      loop timeout ch@ChainSyncHandle{ cshHandler } iocp = do
+      localNodeConnectInfo = LocalNodeConnectInfo {
+        localConsensusModeParams = CardanoModeParams epochSlots,
+        localNodeNetworkId = cfgNetworkId,
+        localNodeSocketPath = socketPath }
+      localNodeClientProtocols :: LocalNodeClientProtocolsInMode CardanoMode
+      localNodeClientProtocols = LocalNodeClientProtocols {
+        localChainSyncClient =
+          LocalChainSyncClient $
+            chainSyncClient slotConfig resumePoints chainSyncEventHandler,
+        localTxSubmissionClient = Nothing,
+        localStateQueryClient = Nothing }
+      loop :: forall a. TimeUnit a
+           => a
+           -> IOManager
+           -> IO ()
+      loop timeout iocp = do
         catchAll
-          (connectToNode
-            (localSnocket iocp socketPath)
-            unversionedHandshakeCodec
-            noTimeLimitsHandshake
-            (cborTermVersionDataCodec unversionedProtocolDataCodec)
-            nullNetworkConnectTracers
-            acceptableVersion
-            (unversionedProtocol $ app cshHandler)
-            Nothing
-            (localAddressFromPath socketPath))
-          {- If we receive any error or disconnect, try to reconnect.
-             This happens a lot on startup, until the server starts. -}
+          (connectToLocalNode
+             localNodeConnectInfo
+             localNodeClientProtocols)
           (\_ -> do
                threadDelay (fromIntegral $ toMicroseconds timeout)
-               loop timeout ch iocp)
-
-      {- Application that communicates using 2 multiplexed protocols
-         (ChainSync and TxSubmission). -}
-      app :: (Block -> Slot -> IO ())
-          -> OuroborosApplication 'InitiatorMode addr
-                                  LBS.ByteString IO () Void
-      app onNewBlock' =
-        mkApplication [(chainSyncMiniProtocolNum, chainSync onNewBlock')]
-
-      chainSync :: (Block -> Slot -> IO ())
-                -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-      chainSync onNewBlock' =
-          InitiatorProtocolOnly $
-          MuxPeer
-            nullTracer
-            codecChainSync
-            (ChainSync.chainSyncClientPeer
-               (chainSyncClient slotConfig onNewBlock'))
+               loop timeout iocp)
 
 -- | The client updates the application state when the protocol state changes.
-chainSyncClient :: SlotConfig
-                -> (Block -> Slot -> IO ())
-                -> ChainSync.ChainSyncClient Block (Point Block) Tip IO ()
-chainSyncClient slotConfig onNewBlock =
-    ChainSync.ChainSyncClient $ pure requestNext
+chainSyncClient
+  :: SlotConfig
+  -> [ChainPoint]
+  -> ChainSyncCallback
+  -> ChainSync.ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+chainSyncClient slotConfig [] chainSyncEventHandler =
+  chainSyncClient slotConfig [ChainPointAtGenesis] chainSyncEventHandler
+chainSyncClient slotConfig resumePoints chainSyncEventHandler =
+    ChainSync.ChainSyncClient $ pure initialise
     where
-      requestNext :: ChainSync.ClientStIdle Block (Point Block) Tip IO ()
+      initialise :: ChainSync.ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+      initialise =
+        ChainSync.SendMsgFindIntersect resumePoints $
+          ChainSync.ClientStIntersect {
+            ChainSync.recvMsgIntersectFound    =
+              \chainPoint _ ->
+                 ChainSync.ChainSyncClient $ do
+                   slot <- currentSlot slotConfig
+                   chainSyncEventHandler (Resume chainPoint) slot
+                   pure requestNext,
+            ChainSync.recvMsgIntersectNotFound =
+              \_   -> ChainSync.ChainSyncClient $ pure requestNext
+          }
+
+      requestNext :: ChainSync.ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
       requestNext =
         ChainSync.SendMsgRequestNext
           handleNext
           (return handleNext)
 
-      handleNext :: ChainSync.ClientStNext Block (Point Block) Tip IO ()
+      handleNext :: ChainSync.ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
       handleNext =
         ChainSync.ClientStNext
         {
           ChainSync.recvMsgRollForward  = \block _ ->
             ChainSync.ChainSyncClient $ do
               slot <- currentSlot slotConfig
-              onNewBlock block slot
-              return requestNext
-        , ChainSync.recvMsgRollBackward = error "Not supported."
+              chainSyncEventHandler (RollForward block) slot
+              pure requestNext
+        , ChainSync.recvMsgRollBackward = \_     _ ->
+            ChainSync.ChainSyncClient $ pure requestNext
         }
 
-runTxSender :: FilePath
-            -> IO TxSendHandle
-runTxSender socketPath = do
-    inputQueue  <- newTQueueIO
-    let handle = TxSendHandle { tshQueue = inputQueue }
-
-    _ <- forkIO $ withIOManager $ loop (1 :: Second) handle
-    pure handle
-    where
-      loop :: TimeUnit a => a -> TxSendHandle -> IOManager -> IO ()
-      loop timeout ch@TxSendHandle{ tshQueue } iocp = do
-        catchAll
-          (connectToNode
-            (localSnocket iocp socketPath)
-            unversionedHandshakeCodec
-            noTimeLimitsHandshake
-            (cborTermVersionDataCodec unversionedProtocolDataCodec)
-            nullNetworkConnectTracers
-            acceptableVersion
-            (unversionedProtocol (app tshQueue))
-            Nothing
-            (localAddressFromPath socketPath))
-          {- If we receive any error or disconnect, try to reconnect.
-             This happens a lot on startup, until the server starts. -}
-          (\_ -> do
-               threadDelay (fromIntegral $ toMicroseconds timeout)
-               loop timeout ch iocp)
-
-      {- Application that communicates using 2 multiplexed protocols
-         (ChainSync and TxSubmission). -}
-      app :: TQueue Tx
-          -> OuroborosApplication 'InitiatorMode addr
-                                  LBS.ByteString IO () Void
-      app inputQueue =
-        mkApplication [(txSubmissionMiniProtocolNum, txSubmission inputQueue)]
-
-
-      txSubmission :: TQueue Tx
-                   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-      txSubmission inputQueue =
-          InitiatorProtocolOnly $
-          MuxPeer
-            (showTracing stdoutTracer)
-            codecTxSubmission
-            (TxSubmission.localTxSubmissionClientPeer
-               (txSubmissionClient inputQueue))
-
--- | The client updates the application state when the protocol state changes.
-txSubmissionClient :: TQueue Tx
-                   -> TxSubmission.LocalTxSubmissionClient Tx String IO ()
-txSubmissionClient txQueue =
-    TxSubmission.LocalTxSubmissionClient pushTxs
-    where
-      pushTxs :: IO (TxSubmission.LocalTxClientStIdle Tx String IO ())
-      pushTxs = do
-        header <- atomically $ readTQueue txQueue
-        return $ TxSubmission.SendMsgSubmitTx
-                   header
-                   (const pushTxs) -- ignore rejects for now

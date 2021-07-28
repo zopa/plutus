@@ -196,7 +196,7 @@ validate :: EscrowParams DatumHash -> PubKeyHash -> Action -> ScriptContext -> B
 validate EscrowParams{escrowDeadline, escrowTargets} contributor action ScriptContext{scriptContextTxInfo} =
     case action of
         Redeem ->
-            traceIfFalse "escrowDeadline-after" (escrowDeadline `after` txInfoValidRange scriptContextTxInfo)
+            traceIfFalse "escrowDeadline-after" ((escrowDeadline + 1) `after` txInfoValidRange scriptContextTxInfo)
             && traceIfFalse "meetsTarget" (all (meetsTarget scriptContextTxInfo) escrowTargets)
         Refund ->
             traceIfFalse "escrowDeadline-before" (escrowDeadline `before` txInfoValidRange scriptContextTxInfo)
@@ -313,7 +313,7 @@ refund ::
 refund inst escrow = do
     pk <- ownPubKey
     unspentOutputs <- utxoAt (Scripts.validatorAddress inst)
-    let flt _ (TxOutTx _ txOut) = Ledger.txOutDatum txOut == Just (Ledger.datumHash $ Datum (PlutusTx.toData $ Ledger.pubKeyHash pk))
+    let flt _ (TxOutTx _ txOut) = Ledger.txOutDatum txOut == Just (Ledger.datumHash $ Datum (PlutusTx.toBuiltinData $ Ledger.pubKeyHash pk))
         tx' = Typed.collectFromScriptFilter flt unspentOutputs Refund
                 <> Constraints.mustValidateIn (from (Haskell.succ $ escrowDeadline escrow))
     if Constraints.modifiesUtxoSet tx'
