@@ -91,14 +91,20 @@ mkListBMs :: [Integer] -> Benchmark
 mkListBMs ns = bgroup "List" [mkListBM n | n <- ns]
 
 writePlc :: UPLC.Program NamedDeBruijn DefaultUni DefaultFun () -> Haskell.IO ()
-writePlc prog =  Haskell.print . PP.prettyPlcClassicDebug $ prog
+writePlc p =
+    case runExcept @UPLC.FreeVariableError $ runQuoteT $ UPLC.unDeBruijnProgram p of
+      Left e   -> throw e
+      Right p' -> Haskell.print . PP.prettyPlcClassicDebug $ p'
 
+
+main1 :: Haskell.IO ()
+main1 = defaultMainWith (defaultConfig { C.csvFile = Just "cek-lists.csv" }) $ [mkListBMs [0,10..1000]]
+
+main2:: Haskell.IO ()
+main2 = writePlc (mkListProg 999)
 
 main :: Haskell.IO ()
-main = defaultMainWith (defaultConfig { C.csvFile = Just "cek-lists.csv" }) $ [mkListBMs [0,10..1000]]
-
--- main :: Haskell.IO ()
--- main = writePlc (mkListProg 999)
+main = main1
 
 
 {- (t+1e-4)/compute ~ 3.7e-8
