@@ -118,6 +118,8 @@ encodeTerm = \case
     Force    ann t    -> encodeTermTag 5 <> encode ann <> encodeTerm t
     Error    ann      -> encodeTermTag 6 <> encode ann
     Builtin  ann bn   -> encodeTermTag 7 <> encode ann <> encode bn
+    Prod     ann es   -> encodeTermTag 8 <> encode ann <> encodeListWith encodeTerm es
+    Proj     ann i p  -> encodeTermTag 9 <> encode ann <> encode i <> encodeTerm p
 
 data SizeLimit = NoLimit | Limit Integer
 
@@ -169,6 +171,8 @@ decodeTerm sizeLimit builtinPred = go
             if builtinPred fun
             then pure t
             else fail $ "Forbidden builtin function: " ++ show (prettyPlcDef t)
+        handleTerm 8 = Prod     <$> decode <*> decodeListWith go
+        handleTerm 9 = Proj     <$> decode <*> decode <*> go
         handleTerm t = fail $ "Unknown term constructor tag: " ++ show t
 
 sizeTerm
@@ -193,6 +197,8 @@ sizeTerm tm sz = termTagWidth + sz + case tm of
     Force    ann t    -> getSize ann + getSize t
     Error    ann      -> getSize ann
     Builtin  ann bn   -> getSize ann + getSize bn
+    Prod     ann es   -> getSize ann + getSize es
+    Proj     ann i p  -> getSize ann + getSize i + getSize p
 
 decodeProgram
     :: forall name uni fun ann

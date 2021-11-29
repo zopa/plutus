@@ -71,6 +71,8 @@ data MachineError fun
       -- when the arity is zero. In the absence of nullary builtins, this should be impossible.
       -- See the machine implementations for details.
     | UnknownBuiltin fun
+    | NonProductIndexedMachineError
+    | ProductIndexOutOfBoundsMachineError Int
     deriving stock (Show, Eq, Functor, Generic)
     deriving anyclass (NFData)
 
@@ -188,6 +190,10 @@ instance (HasPrettyDefaults config ~ 'True, Pretty fun) =>
         pretty unliftingError
     prettyBy _      (UnknownBuiltin fun)                  =
         "Encountered an unknown built-in function:" <+> pretty fun
+    prettyBy _      NonProductIndexedMachineError         =
+        "Indexed something that was not a product"
+    prettyBy _      (ProductIndexOutOfBoundsMachineError i) =
+        "Product index out of bounds:" <+> pretty i
 
 instance
         ( HasPrettyDefaults config ~ 'True
@@ -230,6 +236,9 @@ instance HasErrorCode (MachineError err) where
       errorCode        NonPolymorphicInstantiationMachineError {}   = ErrorCode 24
       errorCode        (UnliftingMachineError e)                    = errorCode e
       errorCode        UnknownBuiltin {}                            = ErrorCode 17
+      -- TODO: fix
+      errorCode        NonProductIndexedMachineError {}             = ErrorCode 17
+      errorCode        ProductIndexOutOfBoundsMachineError {}       = ErrorCode 17
 
 instance (HasErrorCode user, HasErrorCode internal) => HasErrorCode (EvaluationError user internal) where
   errorCode (InternalEvaluationError e) = errorCode e
