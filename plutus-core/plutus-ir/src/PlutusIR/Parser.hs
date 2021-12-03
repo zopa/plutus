@@ -23,7 +23,7 @@ import Prelude hiding (fail)
 
 import PlutusCore qualified as PLC
 import PlutusCore.Parsable qualified as PLC
-import PlutusCore.ParserCommon
+import PlutusCore.Parser.ParserCommon
 import PlutusIR as PIR
 import PlutusIR.MkPir qualified as PIR
 import Text.Megaparsec hiding (ParseError, State, many, parse, some)
