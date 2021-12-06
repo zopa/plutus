@@ -8,7 +8,7 @@ module PlutusCore.Parser.Type
     , identifierStateFrom
     ) where
 
-import PlutusPrelude (Generic, NFData, Natural, Pretty (pretty))
+import PlutusPrelude (Generic, NFData, Pretty (pretty))
 
 import PlutusCore.Name
 
@@ -59,46 +59,17 @@ had reached the end of the literal: consider a tuple containing a quoted string
 containing ')', for example.
 -}
 
--- | A parser term. It includes terms and types and their arguments.
--- Some of these are only for UPLC or TPLC, but it's simplest to share
--- the parser, so we have a joint enumeration of them.
-data ParserTerm tyname name
-    = Program (Version SourcePos) (PLC.Term tyname name DefaultUni DefaultFun SourcePos)
+-- | A typed PLC program in the default universe with the default functions.
+type Prog
+    = PLC.Program TyName Name DefaultUni DefaultFun SourcePos
     -- ^ A program is parameterised by a version number and a term
 
-    -- Terms
-    | PLCTerm (PLC.Term tyname name DefaultUni DefaultFun SourcePos)
-    deriving (Show, Eq, Ord, Generic, NFData)
-    -- | Var ParserTerm
-    -- | LamAbs ParserTerm
-    -- | Constant ParserTerm ParserTerm
-    -- -- ^ A constant term parameterised by a builtin type (@TyBuiltin@)
-    -- -- and the constant, e.g., @Integer@ or @LiteralConst@.
-    -- | Integer Integer
-    -- -- ^ An integer constant.
-    -- | LiteralConst LiteralConst
-    -- -- ^ A literal constant, may be (), unwrapped chars or
-    -- -- chars wrapped in single or double quotes.
-    -- | Builtin DefaultFun
-    -- -- ^ A Builtin function in the default universe.
-    -- -- Parsing of other universe's functions are not supported atm.
-    -- | Error
-    -- -- TPLC only
-    -- | KwAbs
-    -- | KwFun
-    -- | KwAll
-    -- | KwType
-    -- | KwIFix
-    -- | KwIWrap
-    -- | KwUnwrap
-    -- -- UPLC only
-    -- | Force ParserTerm
-    -- | Delay ParserTerm
-    -- -- Types
-    -- | TyBuiltin DefaultTyBuiltin
-    -- -- ^ A builtin type in the default universe.
+-- | A typed PLC term.
+type PLCTerm =
+    PLC.Term TyName Name DefaultUni DefaultFun SourcePos
 
-
+type PLCType =
+    PLC.Type TyName DefaultUni SourcePos
 -- See note [Literal Constants].
 -- | A literal constant.
 data LiteralConst
@@ -120,17 +91,7 @@ instance Pretty LiteralConst where
     pretty DoubleQuotedChars = "lit \""
     pretty UnQuotedChars     = "lit"
 
-data DefaultTyBuiltin
-    = DefaultUniInteger
-    | DefaultUniByteString
-    | DefaultUniString
-    | DefaultUniUnit
-    | DefaultUniBool
-    | DefaultUniList
-    | DefaultUniPair
-    | DefaultUniApply
-    | DefaultUniData
-    deriving (Show, Eq, Ord, Generic, NFData)
+
 
 -- | An 'IdentifierState' includes a map indexed by 'Int's as well as a map
 -- indexed by 'ByteString's. It is used during parsing.
