@@ -13,6 +13,9 @@
     (let
       (nonrec)
       (datatypebind
+        (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+      )
+      (datatypebind
         (datatype
           (tyvardecl Monoid (fun (type) (type)))
           (tyvardecl a (type))
@@ -52,13 +55,13 @@
                   (lam
                     ds
                     [ List a ]
-                    {
+                    [
                       [
                         [
-                          { [ { Nil_match a } ds ] (all dead (type) m) }
-                          (abs
-                            dead
-                            (type)
+                          { [ { Nil_match a } ds ] (fun Unit m) }
+                          (lam
+                            thunk
+                            Unit
                             [
                               { [ { Monoid_match m } dMonoid ] m }
                               (lam
@@ -75,9 +78,9 @@
                           (lam
                             xs
                             [ List a ]
-                            (abs
-                              dead
-                              (type)
+                            (lam
+                              thunk
+                              Unit
                               [
                                 [
                                   [
@@ -107,8 +110,8 @@
                           )
                         )
                       ]
-                      (all dead (type) dead)
-                    }
+                      Unit
+                    ]
                   )
                 )
               )
@@ -205,23 +208,22 @@
                       (lam
                         b
                         [ (lam a (type) [ Maybe a ]) (con integer) ]
-                        {
+                        [
                           [
                             [
                               {
                                 [ { Maybe_match (con integer) } ds ]
-                                (all
-                                  dead
-                                  (type)
+                                (fun
+                                  Unit
                                   [ (lam a (type) [ Maybe a ]) (con integer) ]
                                 )
                               }
-                              (lam ipv (con integer) (abs dead (type) ds))
+                              (lam ipv (con integer) (lam thunk Unit ds))
                             ]
-                            (abs dead (type) b)
+                            (lam thunk Unit b)
                           ]
-                          (all dead (type) dead)
-                        }
+                          Unit
+                        ]
                       )
                     )
                   ]
@@ -231,7 +233,7 @@
               (lam
                 x
                 (con integer)
-                {
+                [
                   [
                     [
                       {
@@ -254,14 +256,14 @@
                             True
                           ]
                         ]
-                        (all dead (type) [ Maybe (con integer) ])
+                        (fun Unit [ Maybe (con integer) ])
                       }
-                      (abs dead (type) [ { Just (con integer) } x ])
+                      (lam thunk Unit [ { Just (con integer) } x ])
                     ]
-                    (abs dead (type) { Nothing (con integer) })
+                    (lam thunk Unit { Nothing (con integer) })
                   ]
-                  (all dead (type) dead)
-                }
+                  Unit
+                ]
               )
             ]
             x

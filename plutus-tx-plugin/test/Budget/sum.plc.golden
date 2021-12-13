@@ -23,6 +23,9 @@
           )
         )
       )
+      (datatypebind
+        (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+      )
       (let
         (rec)
         (termbind
@@ -52,13 +55,13 @@
                   (lam
                     ds
                     [ List a ]
-                    {
+                    [
                       [
                         [
-                          { [ { Nil_match a } ds ] (all dead (type) m) }
-                          (abs
-                            dead
-                            (type)
+                          { [ { Nil_match a } ds ] (fun Unit m) }
+                          (lam
+                            thunk
+                            Unit
                             [
                               { [ { Monoid_match m } dMonoid ] m }
                               (lam
@@ -75,9 +78,9 @@
                           (lam
                             xs
                             [ List a ]
-                            (abs
-                              dead
-                              (type)
+                            (lam
+                              thunk
+                              Unit
                               [
                                 [
                                   [
@@ -107,8 +110,8 @@
                           )
                         )
                       ]
-                      (all dead (type) dead)
-                    }
+                      Unit
+                    ]
                   )
                 )
               )

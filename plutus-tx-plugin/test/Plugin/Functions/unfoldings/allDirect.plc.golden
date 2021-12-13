@@ -2,6 +2,9 @@
   (let
     (nonrec)
     (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
+    (datatypebind
       (datatype
         (tyvardecl Bool (type))
 
@@ -18,29 +21,26 @@
         (lam
           ds
           Bool
-          {
+          [
             [
-              [
-                { [ Bool_match ds ] (all dead (type) Bool) }
-                (abs dead (type) False)
-              ]
-              (abs
-                dead
-                (type)
-                {
+              [ { [ Bool_match ds ] (fun Unit Bool) } (lam thunk Unit False) ]
+              (lam
+                thunk
+                Unit
+                [
                   [
                     [
-                      { [ Bool_match ds ] (all dead (type) Bool) }
-                      (abs dead (type) False)
+                      { [ Bool_match ds ] (fun Unit Bool) }
+                      (lam thunk Unit False)
                     ]
-                    (abs dead (type) True)
+                    (lam thunk Unit True)
                   ]
-                  (all dead (type) dead)
-                }
+                  Unit
+                ]
               )
             ]
-            (all dead (type) dead)
-          }
+            Unit
+          ]
         )
       )
     )
@@ -84,11 +84,11 @@
               (lam
                 l
                 [ List a ]
-                {
+                [
                   [
                     [
-                      { [ { Nil_match a } l ] (all dead (type) Bool) }
-                      (abs dead (type) True)
+                      { [ { Nil_match a } l ] (fun Unit Bool) }
+                      (lam thunk Unit True)
                     ]
                     (lam
                       h
@@ -96,16 +96,16 @@
                       (lam
                         t
                         [ List a ]
-                        (abs
-                          dead
-                          (type)
+                        (lam
+                          thunk
+                          Unit
                           [ [ andDirect [ p h ] ] [ [ { allDirect a } p ] t ] ]
                         )
                       )
                     )
                   ]
-                  (all dead (type) dead)
-                }
+                  Unit
+                ]
               )
             )
           )

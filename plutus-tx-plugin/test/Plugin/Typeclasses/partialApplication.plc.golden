@@ -2,6 +2,9 @@
   (let
     (nonrec)
     (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
+    (datatypebind
       (datatype
         (tyvardecl Bool (type))
 
@@ -45,7 +48,7 @@
         (lam
           y
           (con integer)
-          {
+          [
             [
               [
                 {
@@ -56,14 +59,14 @@
                       False
                     ]
                   ]
-                  (all dead (type) Ordering)
+                  (fun Unit Ordering)
                 }
-                (abs dead (type) EQ)
+                (lam thunk Unit EQ)
               ]
-              (abs
-                dead
-                (type)
-                {
+              (lam
+                thunk
+                Unit
+                [
                   [
                     [
                       {
@@ -80,18 +83,18 @@
                             False
                           ]
                         ]
-                        (all dead (type) Ordering)
+                        (fun Unit Ordering)
                       }
-                      (abs dead (type) LT)
+                      (lam thunk Unit LT)
                     ]
-                    (abs dead (type) GT)
+                    (lam thunk Unit GT)
                   ]
-                  (all dead (type) dead)
-                }
+                  Unit
+                ]
               )
             ]
-            (all dead (type) dead)
-          }
+            Unit
+          ]
         )
       )
     )

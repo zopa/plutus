@@ -79,6 +79,9 @@
             )
           )
         )
+        (datatypebind
+          (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+        )
         (let
           (rec)
           (termbind
@@ -117,11 +120,11 @@
                       (lam
                         ds
                         [ List a ]
-                        {
+                        [
                           [
                             [
-                              { [ { Nil_match a } ds ] (all dead (type) m) }
-                              (abs dead (type) [ { mempty m } dMonoid ])
+                              { [ { Nil_match a } ds ] (fun Unit m) }
+                              (lam thunk Unit [ { mempty m } dMonoid ])
                             ]
                             (lam
                               x
@@ -129,9 +132,9 @@
                               (lam
                                 xs
                                 [ List a ]
-                                (abs
-                                  dead
-                                  (type)
+                                (lam
+                                  thunk
+                                  Unit
                                   [
                                     [ dSemigroup [ ds x ] ]
                                     [
@@ -149,8 +152,8 @@
                               )
                             )
                           ]
-                          (all dead (type) dead)
-                        }
+                          Unit
+                        ]
                       )
                     )
                   )
@@ -182,13 +185,11 @@
                     (lam
                       l
                       [ List a ]
-                      {
+                      [
                         [
                           [
-                            {
-                              [ { Nil_match a } l ] (all dead (type) [ List b ])
-                            }
-                            (abs dead (type) { Nil b })
+                            { [ { Nil_match a } l ] (fun Unit [ List b ]) }
+                            (lam thunk Unit { Nil b })
                           ]
                           (lam
                             x
@@ -196,9 +197,9 @@
                             (lam
                               xs
                               [ List a ]
-                              (abs
-                                dead
-                                (type)
+                              (lam
+                                thunk
+                                Unit
                                 [
                                   [ { Cons b } [ f x ] ]
                                   [ [ { { fFunctorNil_cfmap a } b } f ] xs ]
@@ -207,8 +208,8 @@
                             )
                           )
                         ]
-                        (all dead (type) dead)
-                      }
+                        Unit
+                      ]
                     )
                   )
                 )
@@ -517,16 +518,16 @@
                             (lam
                               ds
                               [ List a ]
-                              {
+                              [
                                 [
                                   [
                                     {
                                       [ { Nil_match a } ds ]
-                                      (all dead (type) [ f [ List b ] ])
+                                      (fun Unit [ f [ List b ] ])
                                     }
-                                    (abs
-                                      dead
-                                      (type)
+                                    (lam
+                                      thunk
+                                      Unit
                                       [
                                         {
                                           [ { pure f } dApplicative ] [ List b ]
@@ -541,9 +542,9 @@
                                     (lam
                                       xs
                                       [ List a ]
-                                      (abs
-                                        dead
-                                        (type)
+                                      (lam
+                                        thunk
+                                        Unit
                                         [
                                           [
                                             {
@@ -594,8 +595,8 @@
                                     )
                                   )
                                 ]
-                                (all dead (type) dead)
-                              }
+                                Unit
+                              ]
                             )
                           )
                         )

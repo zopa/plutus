@@ -137,7 +137,7 @@
                   (termbind
                     (nonstrict)
                     (vardecl nilCase [ Maybe [ [ Tuple2 a ] b ] ])
-                    {
+                    [
                       [
                         [
                           {
@@ -145,15 +145,15 @@
                               { Maybe_match a }
                               [ dFromData [ { head (con data) } l ] ]
                             ]
-                            (all dead (type) [ Maybe [ [ Tuple2 a ] b ] ])
+                            (fun Unit [ Maybe [ [ Tuple2 a ] b ] ])
                           }
                           (lam
                             ipv
                             a
-                            (abs
-                              dead
-                              (type)
-                              {
+                            (lam
+                              thunk
+                              Unit
+                              [
                                 [
                                   [
                                     {
@@ -161,16 +161,14 @@
                                         { Maybe_match b }
                                         [ dFromData [ { head (con data) } l ] ]
                                       ]
-                                      (all
-                                        dead (type) [ Maybe [ [ Tuple2 a ] b ] ]
-                                      )
+                                      (fun Unit [ Maybe [ [ Tuple2 a ] b ] ])
                                     }
                                     (lam
                                       ipv
                                       b
-                                      (abs
-                                        dead
-                                        (type)
+                                      (lam
+                                        thunk
+                                        Unit
                                         [
                                           { Just [ [ Tuple2 a ] b ] }
                                           [ [ { { Tuple2 a } b } ipv ] ipv ]
@@ -178,19 +176,19 @@
                                       )
                                     )
                                   ]
-                                  (abs
-                                    dead (type) { Nothing [ [ Tuple2 a ] b ] }
+                                  (lam
+                                    thunk Unit { Nothing [ [ Tuple2 a ] b ] }
                                   )
                                 ]
-                                (all dead (type) dead)
-                              }
+                                Unit
+                              ]
                             )
                           )
                         ]
-                        (abs dead (type) { Nothing [ [ Tuple2 a ] b ] })
+                        (lam thunk Unit { Nothing [ [ Tuple2 a ] b ] })
                       ]
-                      (all dead (type) dead)
-                    }
+                      Unit
+                    ]
                   )
                   (termbind
                     (nonstrict)

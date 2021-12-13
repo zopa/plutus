@@ -1,6 +1,9 @@
 (program
   (let
     (nonrec)
+    (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
     (termbind
       (strict)
       (vardecl addInteger (fun (con integer) (fun (con integer) (con integer))))
@@ -64,30 +67,30 @@
         (lam
           n
           (con integer)
-          {
+          [
             [
               [
                 {
                   [ Bool_match [ [ equalsInteger n ] (con integer 0) ] ]
-                  (all dead (type) (con integer))
+                  (fun Unit (con integer))
                 }
-                (abs dead (type) (con integer 0))
+                (lam thunk Unit (con integer 0))
               ]
-              (abs
-                dead
-                (type)
-                {
+              (lam
+                thunk
+                Unit
+                [
                   [
                     [
                       {
                         [ Bool_match [ [ equalsInteger n ] (con integer 1) ] ]
-                        (all dead (type) (con integer))
+                        (fun Unit (con integer))
                       }
-                      (abs dead (type) (con integer 1))
+                      (lam thunk Unit (con integer 1))
                     ]
-                    (abs
-                      dead
-                      (type)
+                    (lam
+                      thunk
+                      Unit
                       [
                         [
                           addInteger
@@ -97,12 +100,12 @@
                       ]
                     )
                   ]
-                  (all dead (type) dead)
-                }
+                  Unit
+                ]
               )
             ]
-            (all dead (type) dead)
-          }
+            Unit
+          ]
         )
       )
       fib

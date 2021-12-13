@@ -73,6 +73,9 @@
       )
       fFunctorTuple2_cfmap
     )
+    (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
     (let
       (rec)
       (datatypebind
@@ -108,11 +111,11 @@
                 (lam
                   l
                   [ List a ]
-                  {
+                  [
                     [
                       [
-                        { [ { Nil_match a } l ] (all dead (type) [ List b ]) }
-                        (abs dead (type) { Nil b })
+                        { [ { Nil_match a } l ] (fun Unit [ List b ]) }
+                        (lam thunk Unit { Nil b })
                       ]
                       (lam
                         x
@@ -120,9 +123,9 @@
                         (lam
                           xs
                           [ List a ]
-                          (abs
-                            dead
-                            (type)
+                          (lam
+                            thunk
+                            Unit
                             [
                               [ { Cons b } [ f x ] ]
                               [ [ { { fFunctorNil_cfmap a } b } f ] xs ]
@@ -131,8 +134,8 @@
                         )
                       )
                     ]
-                    (all dead (type) dead)
-                  }
+                    Unit
+                  ]
                 )
               )
             )

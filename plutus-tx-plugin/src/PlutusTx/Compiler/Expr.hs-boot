@@ -9,7 +9,7 @@ import           PlutusTx.PIRTypes
 
 import qualified GhcPlugins                               as GHC
 
-compileDataConRef :: Compiling uni fun m => GHC.DataCon -> m (PIRTerm uni fun)
+compileDataConRef :: CompilingDefault uni fun m => GHC.DataCon -> m (PIRTerm uni fun)
 
 compileExpr
     :: CompilingDefault uni fun m

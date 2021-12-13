@@ -60,6 +60,9 @@
             )
           )
         )
+        (datatypebind
+          (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+        )
         (let
           (rec)
           (termbind
@@ -98,11 +101,11 @@
                       (lam
                         ds
                         [ List a ]
-                        {
+                        [
                           [
                             [
-                              { [ { Nil_match a } ds ] (all dead (type) m) }
-                              (abs dead (type) [ { mempty m } dMonoid ])
+                              { [ { Nil_match a } ds ] (fun Unit m) }
+                              (lam thunk Unit [ { mempty m } dMonoid ])
                             ]
                             (lam
                               x
@@ -110,9 +113,9 @@
                               (lam
                                 xs
                                 [ List a ]
-                                (abs
-                                  dead
-                                  (type)
+                                (lam
+                                  thunk
+                                  Unit
                                   [
                                     [ dSemigroup [ ds x ] ]
                                     [
@@ -130,8 +133,8 @@
                               )
                             )
                           ]
-                          (all dead (type) dead)
-                        }
+                          Unit
+                        ]
                       )
                     )
                   )

@@ -9,6 +9,9 @@
         (vardecl True Bool) (vardecl False Bool)
       )
     )
+    (datatypebind
+      (datatype (tyvardecl Unit (type))  Unit_match (vardecl Unit Unit))
+    )
     (let
       (rec)
       (datatypebind
@@ -47,11 +50,11 @@
                   (lam
                     l
                     [ List a ]
-                    {
+                    [
                       [
                         [
-                          { [ { Nil_match a } l ] (all dead (type) b) }
-                          (abs dead (type) acc)
+                          { [ { Nil_match a } l ] (fun Unit b) }
+                          (lam thunk Unit acc)
                         ]
                         (lam
                           x
@@ -59,16 +62,16 @@
                           (lam
                             xs
                             [ List a ]
-                            (abs
-                              dead
-                              (type)
+                            (lam
+                              thunk
+                              Unit
                               [ [ f x ] [ [ [ { { foldr a } b } f ] acc ] xs ] ]
                             )
                           )
                         )
                       ]
-                      (all dead (type) dead)
-                    }
+                      Unit
+                    ]
                   )
                 )
               )
@@ -85,7 +88,7 @@
                 (lam
                   xs
                   [ List (con integer) ]
-                  {
+                  [
                     [
                       [
                         {
@@ -111,14 +114,14 @@
                               False
                             ]
                           ]
-                          (all dead (type) [ List (con integer) ])
+                          (fun Unit [ List (con integer) ])
                         }
-                        (abs dead (type) [ [ { Cons (con integer) } e ] xs ])
+                        (lam thunk Unit [ [ { Cons (con integer) } e ] xs ])
                       ]
-                      (abs dead (type) xs)
+                      (lam thunk Unit xs)
                     ]
-                    (all dead (type) dead)
-                  }
+                    Unit
+                  ]
                 )
               )
             ]
