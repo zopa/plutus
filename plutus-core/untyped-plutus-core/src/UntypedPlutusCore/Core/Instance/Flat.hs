@@ -120,6 +120,8 @@ encodeTerm = \case
     Builtin  ann bn   -> encodeTermTag 7 <> encode ann <> encode bn
     Prod     ann es   -> encodeTermTag 8 <> encode ann <> encodeListWith encodeTerm es
     Proj     ann i p  -> encodeTermTag 9 <> encode ann <> encode i <> encodeTerm p
+    Tag      ann i t    -> encodeTermTag 10 <> encode ann <> encode i <> encodeTerm t
+    Case     ann arg cs -> encodeTermTag 11 <> encode ann <> encode arg <> encodeListWith encodeTerm cs
 
 data SizeLimit = NoLimit | Limit Integer
 
@@ -173,6 +175,8 @@ decodeTerm sizeLimit builtinPred = go
             else fail $ "Forbidden builtin function: " ++ show (prettyPlcDef t)
         handleTerm 8 = Prod     <$> decode <*> decodeListWith go
         handleTerm 9 = Proj     <$> decode <*> decode <*> go
+        handleTerm 10 = Tag     <$> decode <*> decode <*> go
+        handleTerm 11 = Case    <$> decode <*> decode <*> decodeListWith go
         handleTerm t = fail $ "Unknown term constructor tag: " ++ show t
 
 sizeTerm
@@ -189,16 +193,18 @@ sizeTerm
     -> NumBits
     -> NumBits
 sizeTerm tm sz = termTagWidth + sz + case tm of
-    Var      ann n    -> getSize ann + getSize n
-    Delay    ann t    -> getSize ann + getSize t
-    LamAbs   ann n t  -> getSize ann + getSize n + getSize t
-    Apply    ann t t' -> getSize ann + getSize t + getSize t'
-    Constant ann c    -> getSize ann + getSize c
-    Force    ann t    -> getSize ann + getSize t
-    Error    ann      -> getSize ann
-    Builtin  ann bn   -> getSize ann + getSize bn
-    Prod     ann es   -> getSize ann + getSize es
-    Proj     ann i p  -> getSize ann + getSize i + getSize p
+    Var      ann n      -> getSize ann + getSize n
+    Delay    ann t      -> getSize ann + getSize t
+    LamAbs   ann n t    -> getSize ann + getSize n + getSize t
+    Apply    ann t t'   -> getSize ann + getSize t + getSize t'
+    Constant ann c      -> getSize ann + getSize c
+    Force    ann t      -> getSize ann + getSize t
+    Error    ann        -> getSize ann
+    Builtin  ann bn     -> getSize ann + getSize bn
+    Prod     ann es     -> getSize ann + getSize es
+    Proj     ann i p    -> getSize ann + getSize i + getSize p
+    Tag      ann i p    -> getSize ann + getSize i + getSize p
+    Case     ann arg cs -> getSize ann + getSize arg + getSize cs
 
 decodeProgram
     :: forall name uni fun ann
