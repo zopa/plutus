@@ -1,5 +1,1 @@
-(delay
-  (lam
-    case_Just_77 (lam case_Nothing_78 [ case_Just_77 (prod (con integer 1)) ])
-  )
-)
+(tag 0 (prod (con integer 1)))

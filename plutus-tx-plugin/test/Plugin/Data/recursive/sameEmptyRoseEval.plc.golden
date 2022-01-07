@@ -1,76 +1,12 @@
-(delay
-  (lam
-    case_EmptyRose_26
-    [
-      case_EmptyRose_26
+(tag
+  0
+  (prod
+    (tag
+      1
       (prod
-        (delay
-          (lam
-            case_Nil_32
-            (lam
-              case_Cons_33
-              [
-                case_Cons_33
-                (prod
-                  (delay
-                    (lam
-                      case_EmptyRose_26
-                      [
-                        case_EmptyRose_26
-                        (prod
-                          (delay
-                            (lam
-                              case_Nil_28
-                              (lam case_Cons_29 [ case_Nil_28 (prod ) ])
-                            )
-                          )
-                        )
-                      ]
-                    )
-                  )
-                  (delay
-                    (lam
-                      case_Nil_32
-                      (lam
-                        case_Cons_33
-                        [
-                          case_Cons_33
-                          (prod
-                            (delay
-                              (lam
-                                case_EmptyRose_26
-                                [
-                                  case_EmptyRose_26
-                                  (prod
-                                    (delay
-                                      (lam
-                                        case_Nil_28
-                                        (lam
-                                          case_Cons_29 [ case_Nil_28 (prod ) ]
-                                        )
-                                      )
-                                    )
-                                  )
-                                ]
-                              )
-                            )
-                            (delay
-                              (lam
-                                case_Nil_28
-                                (lam case_Cons_29 [ case_Nil_28 (prod ) ])
-                              )
-                            )
-                          )
-                        ]
-                      )
-                    )
-                  )
-                )
-              ]
-            )
-          )
-        )
+        (tag 0 (prod (tag 0 (prod ))))
+        (tag 1 (prod (tag 0 (prod (tag 0 (prod )))) (tag 0 (prod ))))
       )
-    ]
+    )
   )
 )

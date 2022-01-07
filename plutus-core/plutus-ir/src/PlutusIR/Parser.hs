@@ -160,6 +160,12 @@ prodTerm tm = PIR.prod <$> wordPos "prod" <*> many tm
 projTerm :: Parametric uni fun
 projTerm tm = PIR.proj <$> wordPos "proj" <*> lexeme Lex.decimal <*> tm
 
+tagTerm :: PLC.Parsable (PLC.SomeTypeIn (PLC.Kinded uni)) => Parametric uni fun
+tagTerm tm = PIR.tag <$> wordPos "tag" <*> typ <*> lexeme Lex.decimal <*> tm
+
+caseTerm :: Parametric uni fun
+caseTerm tm = PIR.kase <$> wordPos "case" <*> tm <*> many tm
+
 errorTerm :: PLC.Parsable (PLC.SomeTypeIn (PLC.Kinded uni)) => Parametric uni fun
 errorTerm _tm = PIR.error <$> wordPos "error" <*> typ
 
@@ -184,7 +190,7 @@ term'
        )
     => Parametric uni fun
 term' other = (name >>= (\n -> getSourcePos >>= \p -> return $ PIR.var p n))
-    <|> (inParens $ absTerm self <|> lamTerm self <|> conTerm self <|> iwrapTerm self <|> builtinTerm self <|> unwrapTerm self <|> errorTerm self <|> prodTerm self <|> projTerm self <|> other)
+    <|> (inParens $ absTerm self <|> lamTerm self <|> conTerm self <|> iwrapTerm self <|> builtinTerm self <|> unwrapTerm self <|> errorTerm self <|> prodTerm self <|> projTerm self <|> tagTerm self <|> caseTerm self <|> other)
     <|> inBraces (tyInstTerm self)
     <|> inBrackets (appTerm self)
     where self = term' other

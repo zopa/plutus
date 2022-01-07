@@ -85,6 +85,7 @@ deBruijnTyM = \case
     TyApp ann fun arg -> TyApp ann <$> deBruijnTyM fun <*> deBruijnTyM arg
     TyIFix ann pat arg -> TyIFix ann <$> deBruijnTyM pat <*> deBruijnTyM arg
     TyProd ann tys -> TyProd ann <$> traverse deBruijnTyM tys
+    TySum ann tys -> TySum ann <$> traverse deBruijnTyM tys
     -- boring non-recursive cases
     TyBuiltin ann con -> pure $ TyBuiltin ann con
 
@@ -110,6 +111,8 @@ deBruijnTermM = \case
     Error ann ty -> Error ann <$> deBruijnTyM ty
     Prod ann es -> Prod ann <$> traverse deBruijnTermM es
     Proj ann i p -> Proj ann i <$> deBruijnTermM p
+    Tag ann ty i p -> Tag ann <$> deBruijnTyM ty <*> pure i <*> deBruijnTermM p
+    Case ann arg cs -> Case ann <$> deBruijnTermM arg <*> traverse deBruijnTermM cs
     -- boring non-recursive cases
     Constant ann con -> pure $ Constant ann con
     Builtin ann bn -> pure $ Builtin ann bn
@@ -155,6 +158,7 @@ unDeBruijnTyM = \case
     TyApp ann fun arg -> TyApp ann <$> unDeBruijnTyM fun <*> unDeBruijnTyM arg
     TyIFix ann pat arg -> TyIFix ann <$> unDeBruijnTyM pat <*> unDeBruijnTyM arg
     TyProd ann tys -> TyProd ann <$> traverse unDeBruijnTyM tys
+    TySum ann tys -> TySum ann <$> traverse unDeBruijnTyM tys
     -- boring non-recursive cases
     TyBuiltin ann con -> pure $ TyBuiltin ann con
 
@@ -184,6 +188,8 @@ unDeBruijnTermM = \case
     Error ann ty -> Error ann <$> unDeBruijnTyM ty
     Prod ann es -> Prod ann <$> traverse unDeBruijnTermM es
     Proj ann i p -> Proj ann i <$> unDeBruijnTermM p
+    Tag ann ty i p -> Tag ann <$> unDeBruijnTyM ty <*> pure i <*> unDeBruijnTermM p
+    Case ann arg cs -> Case ann <$> unDeBruijnTermM arg <*> traverse unDeBruijnTermM cs
     -- boring non-recursive cases
     Constant ann con -> pure $ Constant ann con
     Builtin ann bn -> pure $ Builtin ann bn

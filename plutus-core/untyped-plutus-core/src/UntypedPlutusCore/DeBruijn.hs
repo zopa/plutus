@@ -63,6 +63,8 @@ deBruijnTermM = \case
     Force ann t -> Force ann <$> deBruijnTermM t
     Prod ann es -> Prod ann <$> traverse deBruijnTermM es
     Proj ann i p -> Proj ann i <$> deBruijnTermM p
+    Tag ann i p -> Tag ann i <$> deBruijnTermM p
+    Case ann arg cs -> Case ann <$> deBruijnTermM arg <*> traverse deBruijnTermM cs
     -- boring non-recursive cases
     Constant ann con -> pure $ Constant ann con
     Builtin ann bn -> pure $ Builtin ann bn
@@ -99,6 +101,8 @@ unDeBruijnTermM = \case
     Force ann t -> Force ann <$> unDeBruijnTermM t
     Prod ann es -> Prod ann <$> traverse unDeBruijnTermM es
     Proj ann i p -> Proj ann i <$> unDeBruijnTermM p
+    Tag ann i p -> Tag ann i <$> unDeBruijnTermM p
+    Case ann arg cs -> Case ann <$> unDeBruijnTermM arg <*> traverse unDeBruijnTermM cs
     -- boring non-recursive cases
     Constant ann con -> pure $ Constant ann con
     Builtin ann bn -> pure $ Builtin ann bn

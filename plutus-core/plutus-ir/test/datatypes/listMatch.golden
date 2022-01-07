@@ -68,21 +68,7 @@
               (lam
                 List_i0
                 (fun (type) (type))
-                (lam
-                  a_i0
-                  (type)
-                  (all
-                    out_List_i0
-                    (type)
-                    (fun
-                      (fun (prod ) out_List_i1)
-                      (fun
-                        (fun (prod a_i2 [ List_i3 a_i2 ]) out_List_i1)
-                        out_List_i1
-                      )
-                    )
-                  )
-                )
+                (lam a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ])))
               )
               a_i1
             )
@@ -95,70 +81,33 @@
             (lam
               List_i0
               (fun (type) (type))
-              (lam
-                a_i0
-                (type)
-                (all
-                  out_List_i0
-                  (type)
-                  (fun
-                    (fun (prod ) out_List_i1)
-                    (fun
-                      (fun (prod a_i2 [ List_i3 a_i2 ]) out_List_i1) out_List_i1
-                    )
-                  )
-                )
-              )
+              (lam a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ])))
             )
             a_i1
-            (abs
-              out_List_i0
-              (type)
-              (lam
-                case_Nil_i0
-                (fun (prod ) out_List_i2)
+            (tag
+              0
+              [
                 (lam
-                  case_Cons_i0
-                  (fun
-                    (prod
-                      a_i4
-                      [
-                        (lam
-                          a_i0
-                          (type)
-                          (ifix
-                            (lam
-                              List_i0
-                              (fun (type) (type))
-                              (lam
-                                a_i0
-                                (type)
-                                (all
-                                  out_List_i0
-                                  (type)
-                                  (fun
-                                    (fun (prod ) out_List_i1)
-                                    (fun
-                                      (fun
-                                        (prod a_i2 [ List_i3 a_i2 ]) out_List_i1
-                                      )
-                                      out_List_i1
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                            a_i1
-                          )
-                        )
-                        a_i4
-                      ]
-                    )
-                    out_List_i3
-                  )
-                  [ case_Nil_i2 (prod ) ]
+                  List_i0
+                  (fun (type) (type))
+                  (sum (prod ) (prod a_i2 [ List_i1 a_i2 ]))
                 )
-              )
+                (lam
+                  a_i0
+                  (type)
+                  (ifix
+                    (lam
+                      List_i0
+                      (fun (type) (type))
+                      (lam
+                        a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ]))
+                      )
+                    )
+                    a_i1
+                  )
+                )
+              ]
+              (prod )
             )
           )
         )
@@ -179,21 +128,7 @@
                   (lam
                     List_i0
                     (fun (type) (type))
-                    (lam
-                      a_i0
-                      (type)
-                      (all
-                        out_List_i0
-                        (type)
-                        (fun
-                          (fun (prod ) out_List_i1)
-                          (fun
-                            (fun (prod a_i2 [ List_i3 a_i2 ]) out_List_i1)
-                            out_List_i1
-                          )
-                        )
-                      )
-                    )
+                    (lam a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ])))
                   )
                   a_i1
                 )
@@ -204,72 +139,33 @@
               (lam
                 List_i0
                 (fun (type) (type))
-                (lam
-                  a_i0
-                  (type)
-                  (all
-                    out_List_i0
-                    (type)
-                    (fun
-                      (fun (prod ) out_List_i1)
-                      (fun
-                        (fun (prod a_i2 [ List_i3 a_i2 ]) out_List_i1)
-                        out_List_i1
-                      )
-                    )
-                  )
-                )
+                (lam a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ])))
               )
               a_i3
-              (abs
-                out_List_i0
-                (type)
-                (lam
-                  case_Nil_i0
-                  (fun (prod ) out_List_i2)
+              (tag
+                1
+                [
                   (lam
-                    case_Cons_i0
-                    (fun
-                      (prod
-                        a_i6
-                        [
-                          (lam
-                            a_i0
-                            (type)
-                            (ifix
-                              (lam
-                                List_i0
-                                (fun (type) (type))
-                                (lam
-                                  a_i0
-                                  (type)
-                                  (all
-                                    out_List_i0
-                                    (type)
-                                    (fun
-                                      (fun (prod ) out_List_i1)
-                                      (fun
-                                        (fun
-                                          (prod a_i2 [ List_i3 a_i2 ])
-                                          out_List_i1
-                                        )
-                                        out_List_i1
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                              a_i1
-                            )
-                          )
-                          a_i6
-                        ]
-                      )
-                      out_List_i3
-                    )
-                    [ case_Cons_i1 (prod arg_0_i5 arg_1_i4) ]
+                    List_i0
+                    (fun (type) (type))
+                    (sum (prod ) (prod a_i4 [ List_i1 a_i4 ]))
                   )
-                )
+                  (lam
+                    a_i0
+                    (type)
+                    (ifix
+                      (lam
+                        List_i0
+                        (fun (type) (type))
+                        (lam
+                          a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ]))
+                        )
+                      )
+                      a_i1
+                    )
+                  )
+                ]
+                (prod arg_0_i2 arg_1_i1)
               )
             )
           )
@@ -289,28 +185,50 @@
               (lam
                 List_i0
                 (fun (type) (type))
-                (lam
-                  a_i0
-                  (type)
-                  (all
-                    out_List_i0
-                    (type)
-                    (fun
-                      (fun (prod ) out_List_i1)
-                      (fun
-                        (fun (prod a_i2 [ List_i3 a_i2 ]) out_List_i1)
-                        out_List_i1
-                      )
-                    )
-                  )
-                )
+                (lam a_i0 (type) (sum (prod ) (prod a_i1 [ List_i2 a_i1 ])))
               )
               a_i1
             )
           )
           a_i2
         ]
-        (unwrap x_i1)
+        (abs
+          out_List_i0
+          (type)
+          (lam
+            case_Nil_i0
+            (fun (prod ) out_List_i2)
+            (lam
+              case_Cons_i0
+              (fun
+                (prod
+                  a_i5
+                  [
+                    (lam
+                      a_i0
+                      (type)
+                      (ifix
+                        (lam
+                          List_i0
+                          (fun (type) (type))
+                          (lam
+                            a_i0
+                            (type)
+                            (sum (prod ) (prod a_i1 [ List_i2 a_i1 ]))
+                          )
+                        )
+                        a_i1
+                      )
+                    )
+                    a_i5
+                  ]
+                )
+                out_List_i3
+              )
+              (case (unwrap x_i4) case_Nil_i2 case_Cons_i1)
+            )
+          )
+        )
       )
     )
   ]
