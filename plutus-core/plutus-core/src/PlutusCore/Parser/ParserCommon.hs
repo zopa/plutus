@@ -246,6 +246,20 @@ enforce p = do
     guard . not $ T.null input
     pure x
 
+conParser :: SomeTypeIn DefaultUni -> Parser (Some (ValueOf DefaultUni))
+conParser (SomeTypeIn DefaultUniInteger)     = conInt
+conParser (SomeTypeIn DefaultUniByteString)  = conChar
+conParser (SomeTypeIn DefaultUniString)      = conText
+conParser (SomeTypeIn DefaultUniUnit)        = conUnit
+conParser (SomeTypeIn DefaultUniBool)        = conBool
+conParser (SomeTypeIn (DefaultUniList a))    = conList a
+conParser (SomeTypeIn (DefaultUniPair _ _))  = conPair
+conParser (SomeTypeIn DefaultUniProtoList )  = conEmpty
+conParser (SomeTypeIn DefaultUniProtoPair )  = conEmpty
+conParser (SomeTypeIn (DefaultUniApply _ _)) = conEmpty
+conParser (SomeTypeIn DefaultUniData)        = conEmpty
+
+
 signedInteger :: ParsecT ParseError T.Text (StateT ParserState Quote) Integer
 signedInteger = Lex.signed whitespace (lexeme Lex.decimal)
 
@@ -293,32 +307,51 @@ constants ty = choice
             maybeCons <- constants dType
             pure $ con : maybeCons
 
-mkList :: SomeTypeIn DefaultUni -> Some (ValueOf DefaultUni) -> Maybe [Some (ValueOf DefaultUni)] -> Some (ValueOf DefaultUni)
+-- mkList :: DefaultUni (Esc a) ->
+--     Some (ValueOf (DefaultUni (Esc a)) ->
+--     Maybe [Some (ValueOf (DefaultUni (Esc a)))] ->
+--     Some (ValueOf (DefaultUni (Esc a)))
 mkList (SomeTypeIn ty) hd Nothing =
     case hd of
-        (Some (ValueOf ty x)) -> Some $ ValueOf (DefaultUniList ty) [x]
-        _                     -> error $ "mkList: item" <> show x <> "in the list has the wrong type."
+        (Some (ValueOf uniA x)) ->
+            if uniA == ty then
+                Some $ ValueOf (DefaultUniList ty) [x]
+            else error $ "mkList: item" <> show x <> "in the list has the wrong type."
 mkList (SomeTypeIn ty) hd (Just tail) =
     case (hd, tail) of
-        (Some (ValueOf ty x), [Some (ValueOf ty y)]) ->
-            Some $ ValueOf (DefaultUniList ty) [x,y]
+        (Some (ValueOf uniA x), [Some (ValueOf uniB y)]) ->
+            if uniA == uniB && uniA == ty then
+                Some $ ValueOf (DefaultUniList ty) [x,y]
+            else error "type error"
         (Some (ValueOf ty x), hd:xs) ->
             Some $ ValueOf (DefaultUniList ty) $ x:mkList hd xs
         (_, _) -> error "mkList: type error, items in the lists are not of the right types."
 
--- conList :: PType -> Parser (Some (ValueOf DefaultUni))
 conList ty = inBraces $ do
     conFirst <- constant
-    list <- constants ty
-    pure $ ValueOf ty conFirst
+    list <- constants (SomeTypeIn ty)
+    pure $ Some $ ValueOf (DefaultUniList ty) [conFirst]
 
 mkPair :: Some (ValueOf DefaultUni) -> Some (ValueOf DefaultUni) -> Some (ValueOf DefaultUni)
 mkPair (Some (ValueOf uniA x)) (Some (ValueOf uniB y)) = Some $ ValueOf (DefaultUniPair uniA uniB) (x, y)
 
+consPair :: Parser [Some (ValueOf DefaultUni)]
+consPair = choice
+    [ try cons
+    , do
+        oneCon <- constant
+        pure [oneCon]
+    ]
+    where cons = do
+            con <- constant
+            _ <- symbol ","
+            maybeCons <- consPair
+            pure $ con : maybeCons
+
 conPair :: Parser (Some (ValueOf DefaultUni))
 conPair = inBrackets $ do
     conFirst <- constant
-    pairConst conFirst <$> constants
+    pairConst conFirst <$> consPair
 
 pairConst :: Some (ValueOf DefaultUni) ->
     [Some (ValueOf DefaultUni)] -> Some (ValueOf DefaultUni)
