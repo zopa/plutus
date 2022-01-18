@@ -60,7 +60,7 @@ lamTerm :: Parser PTerm
 lamTerm = PIR.LamAbs <$> wordPos "lam" <*> name <*> pType <*> pTerm
 
 conTerm :: Parser PTerm
-conTerm = PIR.Constant <$> wordPos "con" <*> constant
+conTerm = PIR.Constant <$> wordPos "con" <*> constantUntyped
 
 iwrapTerm :: Parser PTerm
 iwrapTerm = PIR.IWrap <$> wordPos "iwrap" <*> pType <*> pType <*> pTerm

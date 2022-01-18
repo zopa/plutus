@@ -3,6 +3,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 -- | Common functions for parsers of UPLC, PLC, and PIR.
 
@@ -17,8 +18,8 @@ import Text.Megaparsec.Char (char, hexDigitChar, letterChar, space1)
 import Text.Megaparsec.Char.Lexer qualified as Lex
 
 import Control.Monad.State (MonadState (get, put), StateT, evalStateT)
-
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString.Internal as IBS (ByteString)
+import Data.ByteString.Lazy as BS (ByteString)
 import Data.ByteString.Lazy.Internal (unpackChars)
 import PlutusCore.Core.Type
 import PlutusCore.Default
@@ -56,7 +57,7 @@ parse :: Parser a -> String -> T.Text -> Either (ParseErrorBundle T.Text ParseEr
 parse p file str = runQuote $ parseQuoted p file str
 
 -- | Generic parser function.
-parseGen :: Parser a -> ByteString -> Either (ParseErrorBundle T.Text ParseError) a
+parseGen :: Parser a -> BS.ByteString -> Either (ParseErrorBundle T.Text ParseError) a
 parseGen stuff bs = parse stuff "test" $ (T.pack . unpackChars) bs
 
 parseQuoted ::
@@ -246,125 +247,124 @@ enforce p = do
     guard . not $ T.null input
     pure x
 
-conParser :: SomeTypeIn DefaultUni -> Parser (Some (ValueOf DefaultUni))
-conParser (SomeTypeIn DefaultUniInteger)     = conInt
-conParser (SomeTypeIn DefaultUniByteString)  = conChar
-conParser (SomeTypeIn DefaultUniString)      = conText
-conParser (SomeTypeIn DefaultUniUnit)        = conUnit
-conParser (SomeTypeIn DefaultUniBool)        = conBool
-conParser (SomeTypeIn (DefaultUniList a))    = conList a
-conParser (SomeTypeIn (DefaultUniPair _ _))  = conPair
-conParser (SomeTypeIn DefaultUniProtoList )  = conEmpty
-conParser (SomeTypeIn DefaultUniProtoPair )  = conEmpty
-conParser (SomeTypeIn (DefaultUniApply _ _)) = conEmpty
-conParser (SomeTypeIn DefaultUniData)        = conEmpty
+-- conParser :: SomeTypeIn DefaultUni -> Parser (Some (ValueOf DefaultUni))
+-- conParser (SomeTypeIn DefaultUniInteger)     = conInt
+-- conParser (SomeTypeIn DefaultUniByteString)  = conChar
+-- conParser (SomeTypeIn DefaultUniString)      = conText
+-- conParser (SomeTypeIn DefaultUniUnit)        = conUnit
+-- conParser (SomeTypeIn DefaultUniBool)        = conBool
+-- conParser (SomeTypeIn (DefaultUniList a))    = conList a
+-- conParser (SomeTypeIn (DefaultUniPair _ _))  = conPair
+-- conParser (SomeTypeIn DefaultUniProtoList )  = conEmpty
+-- conParser (SomeTypeIn DefaultUniProtoPair )  = conEmpty
+-- conParser (SomeTypeIn (DefaultUniApply _ _)) = conEmpty
+-- conParser (SomeTypeIn DefaultUniData)        = conEmpty
 
 
 signedInteger :: ParsecT ParseError T.Text (StateT ParserState Quote) Integer
 signedInteger = Lex.signed whitespace (lexeme Lex.decimal)
 
 -- | Parser for integer constants.
-conInt :: Parser (Some (ValueOf DefaultUni))
+conInt :: Parser Integer
 conInt = do
     con::Integer <- signedInteger
-    pure $ someValue con
+    pure con
 
 -- | Parser for bytestring constants. They start with "#".
-conChar :: Parser (Some (ValueOf DefaultUni))
+conChar :: Parser IBS.ByteString
 conChar = do
     con <- char '#' *> Text.Megaparsec.many hexDigitChar
-    pure $ someValue $ T.pack con
+    pure $ pack con
 
 -- | Parser for string constants. They are wrapped in double quotes.
 -- Even though @takeWhile@ is more efficient, @manyTill@ is easier to use
 -- here and we don't care much about efficiency.
-conText :: Parser (Some (ValueOf DefaultUni))
+conText :: Parser T.Text
 conText = do
     con <- char '\"' *> manyTill Lex.charLiteral (char '\"')
-    pure $ someValue $ T.pack con
+    pure $ T.pack con
 
 -- | Parser for unit.
-conUnit :: Parser (Some (ValueOf DefaultUni))
-conUnit = someValue () <$ symbol "()"
+conUnit :: Parser ()
+conUnit = () <$ symbol "()"
 
 -- | Parser for bool.
-conBool :: Parser (Some (ValueOf DefaultUni))
+conBool :: Parser Bool
 conBool = choice
-    [ someValue True <$ symbol "True"
-    , someValue False <$ symbol "False"
+    [ True <$ symbol "True"
+    , False <$ symbol "False"
     ]
 
-constants :: SomeTypeIn DefaultUni -> Parser [Some (ValueOf DefaultUni)]
-constants ty = choice
-    [ try (cons ty)
-    , do
-        oneCon <- constant
-        pure [oneCon]
-    ]
-    where cons dType = do
-            con <- conParser dType
-            _ <- symbol ","
-            maybeCons <- constants dType
-            pure $ con : maybeCons
+actualCon :: Parser a
+actualCon = inParens $ do
+    _ <- wordPos "con"
+    conTy <- defaultUniType
+    case conTy of
+        SomeTypeIn ty -> constant ty
+
+-- constants :: SomeTypeIn DefaultUni -> Parser [a]
+-- constants (SomeTypeIn ty) = choice
+--     [ try (cons ty)
+--     , do
+--         oneCon <- constant ty
+--         pure [oneCon]
+--     ]
+--     where cons dType = do
+--             con <- conParser dType
+--             _ <- symbol ","
+--             maybeCons <- constants dType
+--             pure $ con : maybeCons
 
 -- mkList :: DefaultUni (Esc a) ->
 --     Some (ValueOf (DefaultUni (Esc a)) ->
 --     Maybe [Some (ValueOf (DefaultUni (Esc a)))] ->
 --     Some (ValueOf (DefaultUni (Esc a)))
-mkList (SomeTypeIn ty) hd Nothing =
-    case hd of
-        (Some (ValueOf uniA x)) ->
-            if uniA == ty then
-                Some $ ValueOf (DefaultUniList ty) [x]
-            else error $ "mkList: item" <> show x <> "in the list has the wrong type."
-mkList (SomeTypeIn ty) hd (Just tail) =
-    case (hd, tail) of
-        (Some (ValueOf uniA x), [Some (ValueOf uniB y)]) ->
-            if uniA == uniB && uniA == ty then
-                Some $ ValueOf (DefaultUniList ty) [x,y]
-            else error "type error"
-        (Some (ValueOf ty x), hd:xs) ->
-            Some $ ValueOf (DefaultUniList ty) $ x:mkList hd xs
-        (_, _) -> error "mkList: type error, items in the lists are not of the right types."
+-- mkList (SomeTypeIn ty) hd Nothing =
+--     case hd of
+--         (Some (ValueOf uniA x)) ->
+--             if uniA == ty then
+--                 Some $ ValueOf (DefaultUniList ty) [x]
+--             else error $ "mkList: item" <> show x <> "in the list has the wrong type."
+-- mkList (SomeTypeIn ty) hd (Just tail) =
+--     case (hd, tail) of
+--         (Some (ValueOf uniA x), [Some (ValueOf uniB y)]) ->
+--             if uniA == uniB && uniA == ty then
+--                 Some $ ValueOf (DefaultUniList ty) [x,y]
+--             else error "type error"
+--         (Some (ValueOf ty x), hd:xs) ->
+--             Some $ ValueOf (DefaultUniList ty) $ x:mkList hd xs
+--         (_, _) -> error "mkList: type error, items in the lists are not of the right types."
 
-conList ty = inBraces $ do
-    conFirst <- constant
-    list <- constants (SomeTypeIn ty)
-    pure $ Some $ ValueOf (DefaultUniList ty) [conFirst]
+-- conList ty = inBraces $ do
+--     conFirst <- constant
+--     list <- constants (SomeTypeIn ty)
+--     pure $ Some $ ValueOf (DefaultUniList ty) [conFirst]
 
 mkPair :: Some (ValueOf DefaultUni) -> Some (ValueOf DefaultUni) -> Some (ValueOf DefaultUni)
 mkPair (Some (ValueOf uniA x)) (Some (ValueOf uniB y)) = Some $ ValueOf (DefaultUniPair uniA uniB) (x, y)
 
-consPair :: Parser [Some (ValueOf DefaultUni)]
-consPair = choice
-    [ try cons
-    , do
-        oneCon <- constant
-        pure [oneCon]
-    ]
-    where cons = do
-            con <- constant
-            _ <- symbol ","
-            maybeCons <- consPair
-            pure $ con : maybeCons
+conPair :: DefaultUni (Esc a) ->
+    DefaultUni (Esc b) -> Parser (a,b)
+conPair tyA tyB = inBrackets $ do
+    conFirst <- constant tyA
+    _ <- symbol ","
+    conSnd <- constant tyB
+    pure (conFirst, conSnd)
 
-conPair :: Parser (Some (ValueOf DefaultUni))
-conPair = inBrackets $ do
-    conFirst <- constant
-    pairConst conFirst <$> consPair
+constant :: DefaultUni (Esc a) -> Parser a-- Parser (Some (ValueOf DefaultUni))
+constant DefaultUniInteger    = conInt
+constant DefaultUniByteString = conChar
+constant DefaultUniString     = conText
+constant DefaultUniUnit       = conUnit
+constant DefaultUniBool       = conBool
+constant (DefaultUniList ty)  = conList ty
+constant (DefaultUniPair a b) = conPair a b
+-- TODO constant (DefaultUnitApply) = conApp
+-- TODO constant (DefaultUniData) = conData
+    -- ]
 
-pairConst :: Some (ValueOf DefaultUni) ->
-    [Some (ValueOf DefaultUni)] -> Some (ValueOf DefaultUni)
-pairConst _t []       = error "pairConst: A pair without second."
-pairConst t [t']      = mkPair t t'
-pairConst t (t' : ts) = mkPair (pairConst t (t':init ts)) (last ts)
-
--- | Empty parser to complete case matching of conParser.
-conEmpty :: Parser (Some (ValueOf DefaultUni)) --FIXME
-conEmpty = pure $ someValue $ T.pack "conEmpty: Not Implemented."
-
-constant :: Parser (Some (ValueOf DefaultUni))
-constant = choice $ map try
+constantUntyped :: Parser (Some (ValueOf DefaultUni))
+constantUntyped = choice $ map try
     [ inParens constant
     , conInt
     , conChar

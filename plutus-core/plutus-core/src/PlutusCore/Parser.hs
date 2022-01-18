@@ -64,8 +64,9 @@ conTerm :: Parser PTerm
 conTerm = inParens $ do
     p <- wordPos "con"
     conTy <- defaultUniType
-    con <- conParser conTy
-    pure $ Constant p con
+    con <- case conTy of
+        SomeTypeIn ty -> constant ty
+    pure $ Constant p $ someValue con
 
 builtinTerm :: Parser PTerm
 builtinTerm = inParens $ Builtin <$> wordPos "builtin" <*> builtinFunction

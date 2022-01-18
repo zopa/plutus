@@ -42,7 +42,7 @@ import PlutusCore.Parser.ParserCommon
 type PTerm = UPLC.Term PLC.Name PLC.DefaultUni PLC.DefaultFun SourcePos
 
 conTerm :: Parser PTerm
-conTerm = inParens $ UPLC.Constant <$> wordPos "con" <*> constant
+conTerm = inParens $ UPLC.Constant <$> wordPos "con" <*> constantUntyped
 
 builtinTerm :: Parser PTerm
 builtinTerm = inParens $ UPLC.Builtin <$> wordPos "builtin" <*> builtinFunction
