@@ -149,7 +149,7 @@ sig chooseData =
 sig chooseUnit = _ ,, ∅ ,⋆ * , ne (` Z) , con (^ unit) ,, ne (` Z)
 sig mkPairData =
   _ ,, ∅ , con (^ Data) , con (^ Data) ,, con (^ (pair (^ Data) (^ Data)))
-sig mkNilData = _ ,, ∅ , con (^ unit) ,, con (^ (list (^ Data)))
+sig mkNilData = _ ,, ∅ ,⋆ ♯ ,, con (^ (list (ne (` Z)))) -- _ ,, ∅ , con (^ unit) ,, con (^ (list (^ Data)))
 sig mkNilPairData = _ ,, ∅ , con (^ unit) ,, con (^ (list (^ (pair (^ Data) (^ Data)))))
 sig mkCons =
   _ ,, ∅ , con (^ Data) , con (^ (list (^ Data))) ,, con (^ (list (^ Data)))

@@ -9,7 +9,7 @@ open import Type.BetaNormal
 open import Type.BetaNormal.Equality
 open import Type.BetaNBE
 open import Type.BetaNBE.Completeness
-open import Builtin.Constant.Type Ctx⋆ (_⊢Nf⋆ ♯)
+open import Builtin.Constant.Type
 
 open import Relation.Binary.PropositionalEquality
 open import Function
@@ -23,16 +23,6 @@ perturb the expression.
 
 \begin{code}
 stability : ∀{K}(n : Φ ⊢Nf⋆ K) → nf (embNf n) ≡ n
-stabilityTyCon : (c : TyCon Φ) → evalTyCon (embNfTyCon c) (idEnv _) ≡ c
-stabilityTyCon integer    = refl
-stabilityTyCon bytestring = refl
-stabilityTyCon string     = refl
-stabilityTyCon unit       = refl
-stabilityTyCon bool       = refl
-stabilityTyCon (list A)   = cong list (stability A)
-stabilityTyCon (pair A B) = cong₂ pair (stability A) (stability B)
-stabilityTyCon Data       = refl
-
 stabilityNe : (n : Φ ⊢Ne⋆ K) → CR K (eval (embNe n) (idEnv _)) (reflect n)
 
 stability (Π B) =
@@ -47,7 +37,6 @@ stability (ƛ B) =
                                    (embNf B)))
                 (stability B))
 stability (con c) = cong con (stability c)
-stability (^ b) = cong ^ (stabilityTyCon b)
 stability (μ A B) = cong₂ μ (stability A) (stability B)
 stability {K = *} (ne n) = stabilityNe n
 stability {K = ♯} (ne n) = stabilityNe n
@@ -57,4 +46,5 @@ stabilityNe (` α) = reflectCR refl
 stabilityNe (n · n') = transCR
   (AppCR (stabilityNe n) (idext idCR (embNf n')))
   (reflectCR (cong₂ _·_ refl (stability n')))
+stabilityNe (^ b) = reflectCR refl
 \end{code}

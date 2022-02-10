@@ -10,8 +10,8 @@ open import Type.RenamingSubstitution
 open import Type.BetaNormal
 open import Type.BetaNBE
 open import Type.BetaNormal.Equality
-import Builtin.Constant.Type Ctx⋆ (_⊢⋆ ♯) as Syn
-import Builtin.Constant.Type Ctx⋆ (_⊢Nf⋆ ♯) as Nf
+import Builtin.Constant.Type as Syn
+import Builtin.Constant.Type as Nf
 
 open import Relation.Binary.PropositionalEquality hiding (subst)
 open import Data.Sum
@@ -292,20 +292,6 @@ idext : ∀{K}{η η' : Env Φ Ψ}
     ---------------------------
   → CR K (eval t η) (eval t η')
 
-idextTyCon : ∀{Φ Ψ}{η η' : Env Φ Ψ}
-  → EnvCR η η'
-  → (c : Syn.TyCon Φ)
-    ------------------------------
-  → evalTyCon c η ≡ evalTyCon c η'
-idextTyCon p Syn.integer    = refl
-idextTyCon p Syn.bytestring = refl
-idextTyCon p Syn.string     = refl
-idextTyCon p Syn.unit       = refl
-idextTyCon p Syn.bool       = refl
-idextTyCon p (Syn.list A)   = cong Nf.list (idext p A)
-idextTyCon p (Syn.pair A B) = cong₂ Nf.pair (idext p A) (idext p B)
-idextTyCon p Syn.Data       = refl
-
 renVal-eval : ∀{Φ Ψ Θ K}
   → (t : Ψ ⊢⋆ K)
   → {η η' : Env Ψ Φ}
@@ -313,23 +299,6 @@ renVal-eval : ∀{Φ Ψ Θ K}
   → (ρ : Ren Φ Θ )
     ---------------------------------------------------
   → CR K (renVal ρ (eval t η)) (eval t (renVal ρ ∘ η'))
-
-renValTyCon-eval : 
-    (c : Syn.TyCon Ψ)
-  → {η η' : Env Ψ Φ}
-  → (p : EnvCR η η')
-  → (ρ : Ren Φ Θ )
-    ----------------------------------------------------------
-  → renNfTyCon ρ (evalTyCon c η) ≡ evalTyCon c (renVal ρ ∘ η')
-renValTyCon-eval Syn.integer    p ρ = refl
-renValTyCon-eval Syn.bytestring p ρ = refl
-renValTyCon-eval Syn.string     p ρ = refl
-renValTyCon-eval Syn.unit       p ρ = refl
-renValTyCon-eval Syn.bool       p ρ = refl
-renValTyCon-eval (Syn.list A)   p ρ = cong Nf.list (renVal-eval A p ρ)
-renValTyCon-eval (Syn.pair A B) p ρ =
-  cong₂ Nf.pair (renVal-eval A p ρ) (renVal-eval B p ρ) 
-renValTyCon-eval Syn.Data       p ρ = refl
 
 idext p (` x) = p x
 idext p (Π B) =
@@ -353,7 +322,7 @@ idext p (ƛ B) =
 idext p (A · B) = AppCR (idext p A) (idext p B)
 idext p (μ A B) = cong₂ μ (reifyCR (idext p A)) (reifyCR (idext p B))
 idext p (con c) = cong con (idext p c)
-idext p (^ b) = cong ^ (idextTyCon p b)
+idext p (^ b)   = reflectCR refl
 
 renVal-eval (` x) p ρ = renCR ρ (p x)
 renVal-eval (Π B) p ρ = cong Π (trans
@@ -391,7 +360,7 @@ renVal-eval (μ A B) p ρ = cong₂ μ
   (trans (ren-reify (idext (reflCR ∘ p) A) ρ) (reifyCR (renVal-eval A p ρ)))
   (trans (ren-reify (idext (reflCR ∘ p) B) ρ) (reifyCR (renVal-eval B p ρ)))
 renVal-eval (con c) p ρ = cong con (renVal-eval c p ρ)
-renVal-eval (^ b) p ρ = cong ^ (renValTyCon-eval b p ρ)
+renVal-eval (^ b) p ρ = renVal-reflect ρ (^ b)
 \end{code}
 
 (pre) renaming commutes with eval
@@ -404,23 +373,6 @@ ren-eval :
   (ρ : Ren Θ Ψ) →
   -----------------------------------------
   CR K (eval (ren ρ t) η) (eval t (η' ∘ ρ))
-
-renTyCon-eval :
-  (c : Syn.TyCon Θ)
-  {η η' : Env Ψ Φ}
-  (p : EnvCR η η')
-  (ρ : Ren Θ Ψ) →
-  -------------------------------------------------
-  evalTyCon (renTyCon ρ c) η ≡ evalTyCon c (η' ∘ ρ)
-renTyCon-eval Syn.integer    p ρ = refl
-renTyCon-eval Syn.bytestring p ρ = refl
-renTyCon-eval Syn.string     p ρ = refl
-renTyCon-eval Syn.unit       p ρ = refl
-renTyCon-eval Syn.bool       p ρ = refl
-renTyCon-eval (Syn.list A)   p ρ = cong Nf.list (ren-eval A p ρ)
-renTyCon-eval (Syn.pair A B) p ρ =
-  cong₂ Nf.pair (ren-eval A p ρ) (ren-eval B p ρ) 
-renTyCon-eval Syn.Data       p ρ = refl
 
 ren-eval (` x) p ρ = p (ρ x)
 ren-eval (Π B) p ρ =
@@ -453,7 +405,7 @@ ren-eval (A · B) p ρ = AppCR (ren-eval A p ρ) (ren-eval B p ρ)
 ren-eval (μ A B) p ρ =
   cong₂ μ (reifyCR (ren-eval A p ρ)) (reifyCR (ren-eval B p ρ))
 ren-eval (con c) p ρ = cong con (ren-eval c p ρ)
-ren-eval (^ b)   p ρ = cong ^ (renTyCon-eval b p ρ)
+ren-eval (^ b)   p ρ = reflectCR refl
 \end{code}
 
 Subsitution lemma
@@ -466,23 +418,6 @@ sub-eval :
   (σ : Sub Θ Ψ) →
   ------------------------------------------------------
   CR K (eval (sub σ t) η) (eval t (λ x → eval (σ x) η'))
-
-subTyCon-eval :
-  (c : Syn.TyCon Θ)
-  {η η' : Env Ψ Φ}
-  (p : EnvCR η η')
-  (σ : Sub Θ Ψ) →
-  --------------------------------------------------------------
-  evalTyCon (subTyCon σ c) η ≡ evalTyCon c (λ x → eval (σ x) η')
-subTyCon-eval Syn.integer    p ρ = refl
-subTyCon-eval Syn.bytestring p ρ = refl
-subTyCon-eval Syn.string     p ρ = refl
-subTyCon-eval Syn.unit       p ρ = refl
-subTyCon-eval Syn.bool       p ρ = refl
-subTyCon-eval (Syn.list A)   p ρ = cong Nf.list (sub-eval A p ρ)
-subTyCon-eval (Syn.pair A B) p ρ =
-  cong₂ Nf.pair (sub-eval A p ρ) (sub-eval B p ρ) 
-subTyCon-eval Syn.Data       p ρ = refl
 
 sub-eval (` x)      p σ = idext p (σ x)
 sub-eval (Π B)    p σ = cong Π (trans
@@ -521,8 +456,7 @@ sub-eval (ƛ B) p σ =
 sub-eval (A · B) p σ = AppCR (sub-eval A p σ) (sub-eval B p σ)
 sub-eval (μ A B) p ρ =
   cong₂ μ (reifyCR (sub-eval A p ρ)) (reifyCR (sub-eval B p ρ))
-sub-eval (^ A) p ρ =
-  cong ^ (subTyCon-eval A p ρ)
+sub-eval (^ A) p ρ = reflectCR refl
 sub-eval (con A) p ρ =
   cong con (reifyCR (sub-eval A p ρ))
 
@@ -537,16 +471,6 @@ fund : {η η' : Env Φ Ψ}
      → t ≡β t'
        ----------------------------
      → CR K (eval t η) (eval t' η')
-
-fundTyCon : {η η' : Env Φ Ψ}
-          → EnvCR η η'
-          → {c c' : Syn.TyCon Φ}
-          → c ≡βTyCon c'
-            -------------------------------
-          → evalTyCon c η ≡ evalTyCon c' η'
-fundTyCon p (refl≡β c) = idextTyCon p c
-fundTyCon p (list≡β A) = cong Nf.list (fund p A)
-fundTyCon p (pair≡β A B) = cong₂ Nf.pair (fund p A) (fund p B) 
 
 fund p (refl≡β A)          = idext p A
 fund p (sym≡β q)           = symCR (fund (symCR ∘ p) q)
@@ -576,7 +500,6 @@ fund p (β≡β B A) =
                  B)
           (symCR (sub-eval B (symCR ∘ p) (sub-cons ` A)))
 fund p (con≡β q) = cong con (fund p q)
-fund p (^≡β q)   = cong ^ (fundTyCon p q)
 \end{code}
 
 constructing the identity CR

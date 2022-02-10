@@ -9,7 +9,7 @@ open import Type.Equality
 open import Type.RenamingSubstitution
 open import Type.BetaNormal
 open import Type.BetaNBE
-import Builtin.Constant.Type Ctx⋆ (_⊢⋆ ♯) as Syn
+import Builtin.Constant.Type as Syn
 
 open import Relation.Binary.PropositionalEquality
   renaming (subst to substEq)
@@ -186,20 +186,6 @@ Fundamental Theorem of Logical Relations for SR
 evalSR : ∀{Φ Ψ K}(A : Φ ⊢⋆ K){σ : Sub Φ Ψ}{η : Env Φ Ψ}
   → SREnv σ η
   → SR K (sub σ A) (eval A η)
-
-evalSRTyCon : ∀{Φ Ψ}(c : Syn.TyCon Φ){σ : Sub Φ Ψ}{η : Env Φ Ψ}
-  → SREnv σ η
-  → subTyCon σ c ≡βTyCon embNfTyCon (evalTyCon c η)
-evalSRTyCon Syn.integer p = refl≡β _
-evalSRTyCon Syn.bytestring p = refl≡β _
-evalSRTyCon Syn.string p = refl≡β _
-evalSRTyCon Syn.unit p = refl≡β _
-evalSRTyCon Syn.bool p = refl≡β _
-evalSRTyCon (Syn.list A) p = list≡β (evalSR A p)
-evalSRTyCon (Syn.pair A B) p = pair≡β (evalSR A p) (evalSR B p)
-evalSRTyCon Syn.Data p = refl≡β _
-
-
 evalSR (` α)                   p = p α
 evalSR (Π B)                   p = Π≡β (evalSR B (SRweak p))
 evalSR (A ⇒ B)                 p = ⇒≡β (evalSR A p) (evalSR B p)
@@ -223,7 +209,7 @@ evalSR (ƛ B)   {σ}{η}          p =
 evalSR (A · B)     p = SRApp (evalSR A p) (evalSR B p)
 evalSR (μ A B)     p = μ≡β (reifySR (evalSR A p)) (reifySR (evalSR B p))
 evalSR (con c)     p = con≡β (evalSR c p)
-evalSR (^ b)       p = ^≡β (evalSRTyCon b p)
+evalSR (^ b)       p = reflectSR (refl≡β _)
 \end{code}
 
 Identity SREnv

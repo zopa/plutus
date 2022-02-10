@@ -18,7 +18,7 @@ open import Type.Equality
 open import Builtin
 open import Utils hiding (TermCon)
 open import Builtin.Constant.Type
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^
+open import Builtin.Constant.Term Ctx⋆ _⊢⋆_ ^
 
 open import Relation.Binary.PropositionalEquality
   hiding ([_]) renaming (subst to substEq)
@@ -120,7 +120,7 @@ sig equalsByteString = ∅ ,, ∅ , con bytestring , con bytestring ,, con bool
 sig appendString = ∅ ,, ∅ , con string , con string ,, con string
 sig trace = ∅ ,, ∅ , con string ,, con unit
 -}
-sig fstPair = _ ,, ∅ ,⋆ ♯ ,⋆ ♯ , con (^ (pair (` (S Z)) (` Z))) ,, con (` (S Z))
+sig fstPair = _ ,, ∅ ,⋆ ♯ ,⋆ ♯ , con (^ pair · ` (S Z) · ` Z) ,, con (` (S Z))
 
 sig _ = ∅ ,, ∅ ,, con (^ unit) -- TODO: add support for remaining builtins
 ```

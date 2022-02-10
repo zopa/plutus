@@ -10,8 +10,7 @@ The postulated operations are in this module because it is not
 parameterised. They could also be placed elsewhere.
 
 ```
-module Builtin.Constant.Type
-  (Con : Set)(Ty : Con → Set) where
+module Builtin.Constant.Type where
 ```
 
 ## Imports
@@ -24,7 +23,7 @@ open import Data.Integer using (ℤ;-_;+≤+;-≤+;-≤-;_<_;_>_;_≤?_;_<?_;_�
 open import Data.Unit using (⊤)
 open import Data.Bool using (Bool)
 open import Data.Product
-open import Relation.Binary
+open import Relation.Binary hiding (_⇒_)
 open import Data.Nat using (ℕ;_*_;z≤n;s≤s;zero;suc)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
@@ -38,15 +37,15 @@ open import Utils
 We have six base types referred to as type constants:
 
 ```
-data TyCon (Φ : Con) : Set where
-  integer    : TyCon Φ
-  bytestring : TyCon Φ
-  string     : TyCon Φ
-  unit       : TyCon Φ
-  bool       : TyCon Φ
-  list       : Ty Φ → TyCon Φ
-  pair       : Ty Φ → Ty Φ → TyCon Φ
-  Data       : TyCon Φ
+data TyCon : Kind → Set where
+  integer    : TyCon ♯
+  bytestring : TyCon ♯
+  string     : TyCon ♯
+  unit       : TyCon ♯
+  bool       : TyCon ♯
+  list       : TyCon (♯ ⇒ ♯)
+  pair       : TyCon (♯ ⇒ (♯ ⇒ ♯))
+  Data       : TyCon ♯
 
 
 --{-# FOREIGN GHC {-# LANGUAGE GADTs, PatternSynonyms #-}                #-}
