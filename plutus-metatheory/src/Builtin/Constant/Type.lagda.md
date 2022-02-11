@@ -10,7 +10,8 @@ The postulated operations are in this module because it is not
 parameterised. They could also be placed elsewhere.
 
 ```
-module Builtin.Constant.Type where
+module Builtin.Constant.Type
+  (Kind : Set)(♯ : Kind)(_⇒_ : Kind → Kind → Kind) where
 ```
 
 ## Imports
@@ -29,7 +30,6 @@ open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 open import Function
 
-open import Utils
 ```
 
 ## Type constants

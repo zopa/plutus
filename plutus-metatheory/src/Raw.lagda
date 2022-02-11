@@ -22,7 +22,7 @@ The raw un-scope-checked and un-type-checked syntax
 
 \begin{code}
 data RawTy : Set
-open import Builtin.Constant.Type ⊤ (λ _ → RawTy)
+open import Builtin.Constant.Type
 
 data RawTyCon : Set
 
@@ -46,8 +46,8 @@ data RawTyCon where
   string     : RawTyCon
   unit       : RawTyCon
   bool       : RawTyCon
-  list       : RawTy → RawTyCon
-  pair       : RawTy → RawTy → RawTyCon
+  list       : RawTyCon
+  pair       : RawTyCon
   Data       : RawTyCon
 
 {-# COMPILE GHC RawTyCon = data RTyCon (RTyConInt | RTyConBS | RTyConStr | RTyConUnit | RTyConBool | RTyConList | RTyConPair | RTyConData) #-}

@@ -24,7 +24,7 @@ open import Type
 open import Declarative
 open import Builtin hiding (length)
 open import Utils
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^
   renaming (TermCon to TyTermCon)
 
 open import Data.Empty

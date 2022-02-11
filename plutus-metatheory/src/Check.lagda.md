@@ -15,6 +15,7 @@ open import Data.Fin
 open import Data.Product renaming (_,_ to _,,_) hiding (map)
 open import Data.Vec hiding ([_];_>>=_) hiding (map)
 import Data.List as L
+open import Data.Unit
 open import Data.Sum
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
@@ -30,8 +31,8 @@ open import Type.BetaNBE.Soundness
 open import Algorithmic
 open import Type.BetaNBE.RenamingSubstitution
 open import Type.BetaNormal.Equality
-import Builtin.Constant.Type Ctx⋆ (_⊢Nf⋆ ♯) as T
-import Builtin.Constant.Type ℕ ScopedTy as S
+import Builtin.Constant.Type Kind ♯ _⇒_ as T
+import Builtin.Constant.Type ⊤ tt (λ _ _ → tt) as S
 ```
 
 ```
@@ -161,21 +162,16 @@ isMu p = do
 
 checkKind : ∀ Φ (A : ScopedTy (len⋆ Φ)) → ∀ K → Either TypeError (Φ ⊢Nf⋆ K)
 inferKind : ∀ Φ (A : ScopedTy (len⋆ Φ)) → Either TypeError (Σ Kind (Φ ⊢Nf⋆_))
-inferKindCon : ∀ Φ (c : S.TyCon (len⋆ Φ)) → Either TypeError (T.TyCon Φ)
+inferKindCon : ∀ (c : S.TyCon tt) → Either TypeError (Σ Kind T.TyCon)
 
-inferKindCon Φ S.integer = inj₂ T.integer
-inferKindCon Φ S.bytestring = inj₂ T.bytestring
-inferKindCon Φ S.string = inj₂ T.string
-inferKindCon Φ S.unit = inj₂ T.unit
-inferKindCon Φ S.bool = inj₂ T.bool
-inferKindCon Φ (S.list A) = do
-  A ← isHash (inferKind Φ A)
-  return (T.list A)
-inferKindCon Φ (S.pair A B) = do
-  A ← isHash (inferKind Φ A)
-  B ← isHash (inferKind Φ B)  
-  return (T.pair A B)
-inferKindCon Φ S.Data = inj₂ T.Data
+inferKindCon S.integer = inj₂ (-, T.integer)
+inferKindCon S.bytestring = inj₂ (-, T.bytestring)
+inferKindCon S.string = inj₂ (-, T.string)
+inferKindCon S.unit = inj₂ (-, T.unit)
+inferKindCon S.bool = inj₂ (-, T.bool)
+inferKindCon S.list = inj₂ (-, T.list)
+inferKindCon S.pair = inj₂ (-, T.pair)
+inferKindCon S.Data = inj₂ (-, T.Data)
 
 checkKind Φ A K = do
   K' ,, A ← inferKind Φ A
@@ -198,8 +194,8 @@ inferKind Φ (A · B) = do
   B ← checkKind Φ B K
   return (J ,, nf (embNf A · embNf B))
 inferKind Φ (^ tc) = do
-  tc ← inferKindCon Φ tc
-  return (♯ ,, ^ tc)
+  k ,, tc ← inferKindCon tc
+  return (k ,, ne (^ tc))
 inferKind Φ (con A) = do
   A ← isHash (inferKind Φ A)
   return (* ,, con A)
@@ -261,51 +257,19 @@ meqTyCon T.bool       T.integer      = inj₁ λ()
 meqTyCon T.bool       T.bytestring   = inj₁ λ()
 meqTyCon T.bool       T.string       = inj₁ λ()
 meqTyCon T.bool       T.unit         = inj₁ λ()
-meqTyCon (T.pair A B) T.integer      = inj₁ λ()
 meqTyCon T.Data       T.integer      = inj₁ λ()
-meqTyCon (T.list A)   T.bytestring   = inj₁ λ()
-meqTyCon (T.pair A B) T.bytestring   = inj₁ λ()
 meqTyCon T.Data       T.bytestring   = inj₁ λ()
-meqTyCon (T.list A)   T.string       = inj₁ λ()
-meqTyCon (T.pair A B) T.string       = inj₁ λ()
 meqTyCon T.Data       T.string       = inj₁ λ()
-meqTyCon (T.list A)   T.unit         = inj₁ λ()
-meqTyCon (T.pair A B) T.unit         = inj₁ λ()
 meqTyCon T.Data       T.unit         = inj₁ λ()
-meqTyCon (T.list A)   T.bool         = inj₁ λ()
-meqTyCon (T.pair A B) T.bool         = inj₁ λ()
 meqTyCon T.Data       T.bool         = inj₁ λ()
-meqTyCon (T.list A)   T.integer      = inj₁ λ()
-meqTyCon T.integer    (T.list A)     = inj₁ λ()
-meqTyCon T.bytestring (T.list A)     = inj₁ λ()
-meqTyCon T.string     (T.list A)     = inj₁ λ()
-meqTyCon T.unit       (T.list A)     = inj₁ λ()
-meqTyCon T.bool       (T.list A)     = inj₁ λ()
-meqTyCon (T.list A)   (T.list A')    = do
-  refl ← withE (λ ¬q → λ{refl → ¬q refl}) (meqNfTy A A')
-  return refl
-meqTyCon (T.pair A B) (T.list A')    = inj₁ λ()
-meqTyCon T.Data       (T.list A)     = inj₁ λ()
-meqTyCon T.integer    (T.pair A' B') = inj₁ λ()
-meqTyCon T.bytestring (T.pair A' B') = inj₁ λ()
-meqTyCon T.string     (T.pair A' B') = inj₁ λ()
-meqTyCon T.unit       (T.pair A' B') = inj₁ λ()
-meqTyCon T.bool       (T.pair A' B') = inj₁ λ()
-meqTyCon (T.list A)   (T.pair A' B') = inj₁ λ()
-meqTyCon (T.pair A B) (T.pair A' B') = do
-  refl ← withE (λ ¬q → λ{refl → ¬q refl}) (meqNfTy A A')
-  refl ← withE (λ ¬q → λ{refl → ¬q refl}) (meqNfTy B B')  
-  return refl
-meqTyCon T.Data       (T.pair A' B') = inj₁ λ()
-meqTyCon T.integer    T.Data = inj₁ λ()
-meqTyCon T.bytestring T.Data = inj₁ λ()
-meqTyCon T.string     T.Data = inj₁ λ()
-meqTyCon T.unit       T.Data = inj₁ λ()
-meqTyCon T.bool       T.Data = inj₁ λ()
-meqTyCon (T.list A)   T.Data = inj₁ λ()
-meqTyCon (T.pair A B) T.Data = inj₁ λ()
-meqTyCon T.Data       T.Data = inj₂ refl
-
+meqTyCon T.list       T.list         = inj₂ refl
+meqTyCon T.pair       T.pair         = inj₂ refl
+meqTyCon T.integer    T.Data         = inj₁ λ()
+meqTyCon T.bytestring T.Data         = inj₁ λ()
+meqTyCon T.string     T.Data         = inj₁ λ()
+meqTyCon T.unit       T.Data         = inj₁ λ()
+meqTyCon T.bool       T.Data         = inj₁ λ()
+meqTyCon T.Data       T.Data         = inj₂ refl
 meqNfTy (A ⇒ B) (A' ⇒ B') = do
   p ← withE (λ ¬p → λ{refl → ¬p refl}) (meqNfTy A A')
   q ← withE (λ ¬q → λ{refl → ¬q refl}) (meqNfTy B B')
@@ -320,9 +284,9 @@ meqNfTy (Π {K = K} A) (Π {K = K'} A') = do
 meqNfTy (con c) (con c') = do
   p ← withE (λ ¬p → λ{refl → ¬p refl}) (meqNfTy c c')
   return (cong con p)
-meqNfTy (^ c) (^ c') = do
+meqNfTy (ne (^ c)) (ne (^ c')) = do
   p ← withE (λ ¬p → λ{refl → ¬p refl}) (meqTyCon c c')
-  return (cong ^ p)
+  return (cong (ne ∘ ^) p)
 meqNfTy (μ {K = K} A B) (μ {K = K'} A' B') = do
   refl ← withE (λ ¬p → λ{refl → ¬p refl}) (meqKind K K')
   q    ← withE (λ ¬q → λ{refl → ¬q refl}) (meqNfTy A A')
@@ -345,12 +309,10 @@ meqNfTy (ne _) (_ ⇒ _) = inj₁ λ()
 meqNfTy (ne _) (ƛ _) = inj₁ λ()
 meqNfTy (ne _) (con _) = inj₁ λ()
 meqNfTy (ne _) (μ _ _) = inj₁ λ()
-meqNfTy (ne _) (^ _) = inj₁ λ()
 meqNfTy (con _) (Π _) = inj₁ λ()
 meqNfTy (con _) (_ ⇒ _) = inj₁ λ()
 meqNfTy (con _) (ne _) = inj₁ λ()
 meqNfTy (con _) (μ _ _) = inj₁ λ()
-meqNfTy (^ _) (ne _) = inj₁ λ()
 meqNfTy (μ _ _) (Π _) = inj₁ λ()
 meqNfTy (μ _ _) (_ ⇒ _) = inj₁ λ()
 meqNfTy (μ _ _) (ne _) = inj₁ λ()
@@ -365,7 +327,13 @@ meqNeTy (_·_ {K = K} A B) (_·_ {K = K'} A' B') = do
   return (cong₂ _·_ q r)
 meqNeTy (` _) (_ · _) = inj₁ λ()
 meqNeTy (_ · _) (` _) = inj₁ λ()
-
+meqNeTy (^ c) (^ c') = do
+  p ← withE (λ ¬p → λ{refl → ¬p refl}) (meqTyCon c c')
+  return (cong ^ p)
+meqNeTy (` _) (^ _) = inj₁ λ()
+meqNeTy (_ · _) (^ _) = inj₁ λ()
+meqNeTy (^ _) (` _) = inj₁ λ()
+meqNeTy (^ _) (_ · _) = inj₁ λ()
 open import Type.BetaNormal.Equality
 
 inv-complete : ∀{Φ K}{A A' : Φ ⊢⋆ K} → nf A ≡ nf A' → A' ≡β A
@@ -374,10 +342,10 @@ inv-complete {A = A}{A' = A'} p = trans≡β
   (trans≡β (≡2β (sym (cong embNf p))) (sym≡β (soundness A)))
 
 open import Function
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^ as A
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as A
 open import Type.RenamingSubstitution
 
-inferTypeCon : ∀{Φ} → TermCon → Σ (T.TyCon _) λ c → A.TermCon {Φ} (^ c) 
+inferTypeCon : ∀{Φ} → TermCon → Σ (T.TyCon _) λ c → A.TermCon {Φ} (ne (^ c))
 inferTypeCon (integer i)    = T.integer ,, A.integer i
 inferTypeCon (bytestring b) = T.bytestring ,, A.bytestring b
 inferTypeCon (string s)     = T.string ,, A.string s
@@ -416,7 +384,7 @@ inferType {Φ} Γ (L · M) = do
   return (B ,, L · M)
 inferType {Φ} Γ (con c) = do
   let tc ,, c = inferTypeCon {Φ} c
-  return (con (^ tc) ,, con c)
+  return (con (ne (^ tc)) ,, con c)
 inferType Γ (error A) = do
   A ← isStar (inferKind _ A)
   return (A ,, error A)

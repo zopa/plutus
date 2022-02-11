@@ -18,7 +18,7 @@ open import Type.Equality
 open import Builtin
 open import Utils hiding (TermCon)
 open import Builtin.Constant.Type
-open import Builtin.Constant.Term Ctx⋆ _⊢⋆_ ^
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^
 
 open import Relation.Binary.PropositionalEquality
   hiding ([_]) renaming (subst to substEq)

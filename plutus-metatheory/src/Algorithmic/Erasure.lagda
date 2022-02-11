@@ -17,8 +17,8 @@ open import Type
 open import Type.BetaNBE.RenamingSubstitution
 open import Function hiding (_∋_)
 open import Builtin hiding (length)
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^ as DC renaming (TermCon to TyTermCon)
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^ as AC renaming (TermCon to TyTermCon)
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^ as DC renaming (TermCon to TyTermCon)
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as AC renaming (TermCon to TyTermCon)
 open import Type.RenamingSubstitution as T
 open import Type.Equality
 open import Type.BetaNBE.Soundness

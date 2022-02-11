@@ -10,6 +10,7 @@ open import Data.Vec
 open import Function using (_∘_)
 open import Data.Sum using (inj₁;inj₂)
 open import Data.Product renaming (_,_ to _,,_)
+open import Data.Unit
 
 open import Utils
 open import Type
@@ -18,10 +19,10 @@ open import Type.BetaNBE.RenamingSubstitution
 open import Algorithmic as A
 open import Scoped
 open import Builtin
-import Builtin.Constant.Type Ctx⋆ (_⊢Nf⋆ ♯) as T
-import Builtin.Constant.Type ℕ ScopedTy as S
+import Builtin.Constant.Type Kind ♯ _⇒_ as T
+import Builtin.Constant.Type ⊤ tt (λ _ _ → tt) as S
 
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^ as B
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as B
 open import Type.BetaNormal
 open import Type.RenamingSubstitution as T
 \end{code}
@@ -39,7 +40,7 @@ extricateVar⋆ (S α) = suc (extricateVar⋆ α)
 
 extricateNf⋆ : ∀{Γ K}(A : Γ ⊢Nf⋆ K) → ScopedTy (len⋆ Γ)
 extricateNe⋆ : ∀{Γ K}(A : Γ ⊢Ne⋆ K) → ScopedTy (len⋆ Γ)
-extricateTyConNf⋆ : ∀{Γ}(A : T.TyCon Γ) → S.TyCon (len⋆ Γ)
+extricateTyConNf⋆ : ∀{K}(A : T.TyCon K) → S.TyCon tt
 
 -- intrinsically typed terms should also carry user chosen names as
 -- instructions to the pretty printer
@@ -49,8 +50,8 @@ extricateTyConNf⋆ T.bytestring = S.bytestring
 extricateTyConNf⋆ T.string = S.string
 extricateTyConNf⋆ T.unit = S.unit
 extricateTyConNf⋆ T.bool = S.bool
-extricateTyConNf⋆ (T.list A) = S.list (extricateNf⋆ A)
-extricateTyConNf⋆ (T.pair A B) = S.pair (extricateNf⋆ A) (extricateNf⋆ B) 
+extricateTyConNf⋆ T.list = S.list
+extricateTyConNf⋆ T.pair = S.pair
 extricateTyConNf⋆ T.Data = S.Data
 
 extricateNf⋆ (Π {K = K} A) = Π K (extricateNf⋆ A)
@@ -59,10 +60,10 @@ extricateNf⋆ (ƛ {K = K} A) = ƛ K (extricateNf⋆ A)
 extricateNf⋆ (ne n) = extricateNe⋆ n
 extricateNf⋆ (con c) = con (extricateNf⋆ c)
 extricateNf⋆ (μ A B) = μ (extricateNf⋆ A) (extricateNf⋆ B)
-extricateNf⋆ (^ A) = ^ (extricateTyConNf⋆ A)
 
 extricateNe⋆ (` α) = ` (extricateVar⋆ α)
 extricateNe⋆ (n · n') = extricateNe⋆ n · extricateNf⋆ n'
+extricateNe⋆ (^ A) = ^ (extricateTyConNf⋆ A)
 \end{code}
 
 

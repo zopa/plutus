@@ -24,8 +24,8 @@ open import Type.BetaNBE.Soundness
 open import Type.BetaNBE.Stability
 open import Type.BetaNBE.RenamingSubstitution
 open import Builtin
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^ as STermCon
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^ as NTermCon
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^ as STermCon
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as NTermCon
 \end{code}
 
 \begin{code}

@@ -36,7 +36,7 @@ pi types, function types, lambdas or neutral terms.
 \begin{code}
 data _⊢Nf⋆_ : Ctx⋆ → Kind → Set
 
-import Builtin.Constant.Type as Nf
+import Builtin.Constant.Type Kind ♯ _⇒_ as Nf
 
 data _⊢Ne⋆_ : Ctx⋆ → Kind → Set where
   ` : Φ ∋⋆ J

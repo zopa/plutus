@@ -25,8 +25,8 @@ open import Algorithmic.Erasure
 open import Untyped
 import Untyped.RenamingSubstitution as U
 open import Builtin
-open import Builtin.Constant.Type Ctx⋆ (_⊢Nf⋆ ♯)
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^ as AB
+open import Builtin.Constant.Type Kind ♯ _⇒_
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as AB
 \end{code}
 
 \begin{code}

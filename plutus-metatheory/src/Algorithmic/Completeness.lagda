@@ -68,8 +68,8 @@ lem[] A B = trans
     (sym (sub-eval B idCR (sub-cons ` A))))
 
 open import Builtin hiding (length)
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^ as STermCon
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^ as NTermCon
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^ as STermCon
+import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as NTermCon
 
 
 nfTypeTC : ∀{φ}{A : φ ⊢⋆ ♯} → STermCon.TermCon A → NTermCon.TermCon (nf A)
@@ -107,7 +107,7 @@ lemσ σ C _ refl q = trans
 -- this should be a lemma in NBE/RenSubst
 -- subNf (nf ∘ σ) (nf C) ≡ nf (sub σ C)
 
-open import Builtin.Constant.Type  Ctx⋆ (_⊢Nf⋆ *)
+open import Builtin.Constant.Type Kind ♯ _⇒_
 nfList : ∀{Δ} → List (Δ ⊢⋆ *) → List (Δ ⊢Nf⋆ *)
 nfList []       = []
 nfList (A ∷ As) = nf A ∷ nfList As

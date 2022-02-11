@@ -29,7 +29,7 @@ open import Type
 
 data ScopedTy (n : ℕ) : Set
 
-import Builtin.Constant.Type ℕ ScopedTy as S
+import Builtin.Constant.Type ⊤ tt (λ _ _ → tt) as S
 
 data ScopedTy n where
   `    : Fin n → ScopedTy n
@@ -38,12 +38,9 @@ data ScopedTy n where
   ƛ    : Kind → ScopedTy (suc n) → ScopedTy n
   _·_  : ScopedTy n → ScopedTy n → ScopedTy n
   con  : ScopedTy n → ScopedTy n
-  ^    : S.TyCon n → ScopedTy n
+  ^    : S.TyCon tt → ScopedTy n
   μ    : ScopedTy n → ScopedTy n → ScopedTy n
   missing : ScopedTy n -- for when things compute to error
-
-Tel⋆ : ℕ → ℕ → Set
-Tel⋆ n m = Vec (ScopedTy n) m
 
 -- contexts
 
@@ -59,6 +56,8 @@ data WeirdFin : ∀{n} → Weirdℕ n → Set where
   S : ∀{n}{w : Weirdℕ n} → WeirdFin w → WeirdFin (S w)
   T : ∀{n}{w : Weirdℕ n} → WeirdFin w → WeirdFin (T w)
 
+Tel⋆ : ℕ → ℕ → Set
+Tel⋆ n m = Vec (ScopedTy n) m
 
 -- what is this for?
 -- there are two meaningful things here:
@@ -238,11 +237,8 @@ scopeCheckTyCon bytestring = inj₂ S.bytestring
 scopeCheckTyCon string     = inj₂ S.string
 scopeCheckTyCon unit       = inj₂ S.unit
 scopeCheckTyCon bool       = inj₂ S.bool
-scopeCheckTyCon (list A)   = fmap S.list (scopeCheckTy A)
-scopeCheckTyCon (pair A B) = do
-  A ← scopeCheckTy A
-  B ← scopeCheckTy B
-  return (S.pair A B)
+scopeCheckTyCon list       = inj₂ S.list
+scopeCheckTyCon pair       = inj₂ S.pair
 scopeCheckTyCon Data       = inj₂ S.Data
 
 scopeCheckTy (` x) = fmap ` (ℕtoFin x)
@@ -307,8 +303,8 @@ extricateTyCon S.bytestring = bytestring
 extricateTyCon S.string     = string
 extricateTyCon S.unit       = unit
 extricateTyCon S.bool       = bool
-extricateTyCon (S.list A)   = list (extricateScopeTy A)
-extricateTyCon (S.pair A B) = pair (extricateScopeTy A) (extricateScopeTy B)
+extricateTyCon S.list       = list
+extricateTyCon S.pair       = pair
 extricateTyCon S.Data       = Data
 
 extricateScopeTy (` x) = ` (toℕ x)
