@@ -28,7 +28,7 @@ open import Algorithmic.RenamingSubstitution
 open import Builtin
 open import Utils hiding (TermCon)
 open import Builtin.Constant.Type Kind ♯ _⇒_
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^)
+open import Builtin.Constant.Term Kind ♯ _⇒_
 open import Data.Empty
 
 data Env : Ctx ∅ → Set
@@ -54,9 +54,9 @@ data Value : (A : ∅ ⊢Nf⋆ *) → Set where
    → Value (nf (embNf A · ƛ (μ (embNf (weakenNf A)) (` Z)) · embNf B))
    → Value (μ A B)
 
-  V-con : {tcn : ∅ ⊢Nf⋆ ♯}
-    → (cn : TermCon {∅} tcn)
-    → Value (con tcn)
+  V-con : ∀{tcn}
+    → (cn : TermCon tcn)
+    → Value (con (ne^ tcn))
 
   V-I⇒ : ∀ b {A B as as'}
        → (p : as <>> (Term ∷ as') ∈ arity b)
@@ -1117,7 +1117,7 @@ postulate cek2ckClos-wraplem : ∀{K}{A}{B : ∅ ⊢Nf⋆ K}{L}{Γ}{ρ : Env Γ}
 
 postulate cek2ckClos-unwraplem : ∀{K}{A}{B : ∅ ⊢Nf⋆ K}{L : ∅ ⊢ μ A B}{Γ}{ρ : Env Γ}{N : Γ ⊢ _} → (p : unwrap L refl ≡ cek2ckClos N ρ) → (∃ λ L' → N ≡ unwrap L' refl × L ≡ cek2ckClos L' ρ)
 
-postulate cek2ckClos-conlem : ∀{tc : ∅ ⊢Nf⋆ ♯}(c : TermCon tc){Γ}{M' : Γ ⊢ con tc}{ρ : Env Γ} → con c ≡ cek2ckClos M' ρ → M' ≡ con c ⊎ ∃ λ x → M' ≡ ` x × V-con c ≡ lookup x ρ
+postulate cek2ckClos-conlem : ∀{tc}(c : TermCon tc){Γ}{M' : Γ ⊢ con (ne^ tc)}{ρ : Env Γ} → con c ≡ cek2ckClos M' ρ → M' ≡ con c ⊎ ∃ λ x → M' ≡ ` x × V-con c ≡ lookup x ρ
 
 postulate cek2ckClos-ibuiltinlem : ∀{b}{Γ}{M' : Γ ⊢ btype b}{ρ : Env Γ} → builtin b / refl ≡ cek2ckClos M' ρ → (M' ≡ builtin b / refl × ∃ λ p → substEq Red.Value p (Red.ival b) ≡ cek2ckVal (ival b)) ⊎ ∃ λ x → M' ≡ ` x × ∃ λ (p : builtin b / refl ≡ discharge (lookup x ρ)) → substEq Red.Value p (Red.ival b) ≡ cek2ckVal (lookup x ρ)
 

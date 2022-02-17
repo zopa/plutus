@@ -26,7 +26,7 @@ open import Untyped
 import Untyped.RenamingSubstitution as U
 open import Builtin
 open import Builtin.Constant.Type Kind ♯ _⇒_
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as AB
+open import Builtin.Constant.Term Kind ♯ _⇒_ as AB
 \end{code}
 
 \begin{code}
@@ -108,16 +108,6 @@ conv⊢-erase : ∀{Φ}{Γ : Ctx Φ}{A A' : Φ ⊢Nf⋆ *}
   → erase (conv⊢ refl p t) ≡ erase t
 conv⊢-erase refl t = refl
 
-renTermCon-erase : ∀{Φ Ψ}{Γ : Ctx Φ}{Δ : Ctx Ψ}(ρ⋆ : ⋆.Ren Φ Ψ)
-  → (ρ : A.Ren ρ⋆ Γ Δ){A : Φ ⊢Nf⋆ ♯}(c : AB.TermCon A)
-  → eraseTC {Γ = Δ} (A.renTermCon ρ⋆ c) ≡ eraseTC {Γ = Γ} c 
-renTermCon-erase ρ⋆ ρ (AB.integer i)    = refl
-renTermCon-erase ρ⋆ ρ (AB.bytestring b) = refl
-renTermCon-erase ρ⋆ ρ (AB.string s)     = refl
-renTermCon-erase ρ⋆ ρ (AB.bool b)       = refl
-renTermCon-erase ρ⋆ ρ AB.unit           = refl
-renTermCon-erase ρ⋆ ρ (AB.Data d)       = refl
-
 ext⋆-erase : ∀{Φ Ψ K}{Γ : Ctx Φ}{Δ : Ctx Ψ}(ρ⋆ : ⋆.Ren Φ Ψ)
   → (ρ : A.Ren ρ⋆ Γ Δ)(α : len Γ)
   → erase-Ren (⋆.ext ρ⋆ {K = K}) (A.ext⋆ ρ⋆ ρ) α ≡ erase-Ren ρ⋆ ρ α
@@ -156,7 +146,7 @@ ren-erase ρ⋆ ρ (wrap A B t)  = trans
 ren-erase ρ⋆ ρ (unwrap {A = A}{B = B} t refl) = trans
   (conv⊢-erase (sym (ren-nf-μ ρ⋆ A B)) (unwrap (A.ren ρ⋆ ρ t) refl))
   (ren-erase ρ⋆ ρ t)
-ren-erase ρ⋆ ρ (con c)            = cong con (renTermCon-erase ρ⋆ ρ c)
+ren-erase ρ⋆ ρ (con c)            = refl
 ren-erase ρ⋆ ρ (builtin b / refl)        =
  sym (lem-erase refl (btype-ren b ρ⋆) (builtin b / refl))
 ren-erase ρ⋆ ρ (error A)          = refl
@@ -200,15 +190,6 @@ exts⋆-erase {Γ = Γ}{Δ} σ⋆ σ {B} α = trans
     (trans
       (U.ren-cong (eraseVar-backVar Δ) (erase (σ (backVar Γ α))))
       (sym (U.ren-id (erase (σ (backVar Γ α)))))))
-subTermCon-erase : ∀{Φ Ψ}{Γ : Ctx Φ}{Δ : Ctx Ψ}(σ⋆ : SubNf Φ Ψ)
-  → (σ : A.Sub σ⋆ Γ Δ){A : Φ ⊢Nf⋆ ♯}(c : AB.TermCon A)
-  → eraseTC {Γ = Δ} (A.subTermCon σ⋆ c) ≡ eraseTC {Γ = Γ} c 
-subTermCon-erase σ⋆ σ (AB.integer i)    = refl
-subTermCon-erase σ⋆ σ (AB.bytestring b) = refl
-subTermCon-erase σ⋆ σ (AB.string s)     = refl
-subTermCon-erase σ⋆ σ (AB.bool b)       = refl
-subTermCon-erase σ⋆ σ AB.unit           = refl
-subTermCon-erase σ⋆ σ (AB.Data d)       = refl
 
 sub-erase : ∀{Φ Ψ}{Γ : Ctx Φ}{Δ : Ctx Ψ}(σ⋆ : SubNf Φ Ψ)
   → (σ : A.Sub σ⋆ Γ Δ){A : Φ ⊢Nf⋆ *} → (t : Γ ⊢ A)
@@ -236,7 +217,7 @@ sub-erase σ⋆ σ (wrap A B t) = trans
 sub-erase σ⋆ σ (unwrap {A = A}{B} t refl) = trans
   (conv⊢-erase (sym (sub-nf-μ σ⋆ A B)) (unwrap (A.sub σ⋆ σ t) refl))
   (sub-erase σ⋆ σ t)
-sub-erase σ⋆ σ (con c) = cong con (subTermCon-erase σ⋆ σ c)
+sub-erase σ⋆ σ (con c) = refl
 sub-erase σ⋆ σ (builtin b / refl) =
  sym (lem-erase refl (btype-sub b σ⋆) (builtin b / refl))
 sub-erase σ⋆ σ (error A) = refl

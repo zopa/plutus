@@ -24,7 +24,7 @@ open import Builtin.Constant.Type Kind ♯ _⇒_
 ne^ : ∀{Φ} → TyCon ♯ → Φ ⊢Nf⋆ ♯
 ne^ = ne ∘ ^
 
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ ne^
+open import Builtin.Constant.Term Kind ♯ _⇒_
 \end{code}
 
 ## Fixity declarations
@@ -224,10 +224,10 @@ data _⊢_ {Φ} (Γ : Ctx Φ) : Φ ⊢Nf⋆ * → Set where
       -------------------------------------------------------------
     → Γ ⊢ C
 
-  con : ∀{tcn}
-    → TermCon {Φ} tcn
+  con : ∀{c}
+    → TermCon c
       ---------------------
-    → Γ ⊢ con tcn
+    → Γ ⊢ con (ne^ c)
 
   builtin_/_ : ∀{C}
     → (b :  Builtin)

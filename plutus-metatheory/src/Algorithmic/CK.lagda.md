@@ -23,7 +23,7 @@ open import Type.BetaNormal.Equality
 open import Algorithmic
 open import Builtin
 open import Builtin.Constant.Type Kind ♯ _⇒_
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^)
+open import Builtin.Constant.Term Kind ♯ _⇒_
 open import Type.BetaNBE.RenamingSubstitution
 open import Type.BetaNBE
 open import Algorithmic.RenamingSubstitution

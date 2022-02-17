@@ -342,10 +342,10 @@ inv-complete {A = A}{A' = A'} p = trans≡β
   (trans≡β (≡2β (sym (cong embNf p))) (sym≡β (soundness A)))
 
 open import Function
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as A
+import Builtin.Constant.Term Kind ♯ _⇒_ as A
 open import Type.RenamingSubstitution
 
-inferTypeCon : ∀{Φ} → TermCon → Σ (T.TyCon _) λ c → A.TermCon {Φ} (ne (^ c))
+inferTypeCon : TermCon → Σ (T.TyCon _) λ c → A.TermCon c
 inferTypeCon (integer i)    = T.integer ,, A.integer i
 inferTypeCon (bytestring b) = T.bytestring ,, A.bytestring b
 inferTypeCon (string s)     = T.string ,, A.string s
@@ -383,7 +383,7 @@ inferType {Φ} Γ (L · M) = do
   M ← checkType Γ M A
   return (B ,, L · M)
 inferType {Φ} Γ (con c) = do
-  let tc ,, c = inferTypeCon {Φ} c
+  let tc ,, c = inferTypeCon c
   return (con (ne (^ tc)) ,, con c)
 inferType Γ (error A) = do
   A ← isStar (inferKind _ A)

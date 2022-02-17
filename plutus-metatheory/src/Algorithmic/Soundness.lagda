@@ -24,8 +24,7 @@ open import Type.BetaNBE.Soundness
 open import Type.BetaNBE.Stability
 open import Type.BetaNBE.RenamingSubstitution
 open import Builtin
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^ as STermCon
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as NTermCon
+open import Builtin.Constant.Term Kind ♯ _⇒_
 \end{code}
 
 \begin{code}
@@ -68,19 +67,6 @@ soundness-μ p A B = trans≡β
   (soundness (embNf A · ƛ (μ (weaken (embNf A)) (` Z)) · embNf B))
   (≡2β (cong (λ X → embNf (nf (embNf A · ƛ (μ X (` Z)) · embNf B)))
              (sym (ren-embNf S A))))
-\end{code}
-
-\begin{code}
-
-embTC : ∀{φ}{A : φ ⊢Nf⋆ ♯}
-  → NTermCon.TermCon A
-  → STermCon.TermCon (embNf A)
-embTC (NTermCon.integer i)    = STermCon.integer i
-embTC (NTermCon.bytestring b) = STermCon.bytestring b
-embTC (NTermCon.string s)     = STermCon.string s
-embTC (NTermCon.bool b)       = STermCon.bool b
-embTC NTermCon.unit           = STermCon.unit
-embTC (NTermCon.Data d)       = STermCon.Data d
 \end{code}
 
 \begin{code}
@@ -154,7 +140,7 @@ emb (Alg.wrap A B t) = Dec.wrap
   (Dec.conv (sym≡β (soundness-μ refl A B)) (emb t))
 emb (Alg.unwrap {A = A}{B} t refl) =
   Dec.conv (soundness-μ refl A B) (Dec.unwrap (emb t))
-emb (Alg.con  {tcn = tcn} t ) = Dec.con (embTC t)
+emb (Alg.con t) = Dec.con t
 emb (Alg.builtin b / refl) = Dec.conv (btype-lem≡β b) (Dec.builtin b)
 emb (Alg.error A) = Dec.error (embNf A)
 

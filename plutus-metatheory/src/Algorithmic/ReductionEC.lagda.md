@@ -33,7 +33,7 @@ open import Type.BetaNormal
 open import Type.BetaNormal.Equality
 open import Builtin
 open import Builtin.Constant.Type Kind ♯ _⇒_
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^)
+open import Builtin.Constant.Term Kind ♯ _⇒_
 open import Data.Maybe using (just;from-just)
 open import Data.String using (String)
 open import Relation.Binary.HeterogeneousEquality using (_≅_;≡-subst-removable;refl;≡-to-≅;≅-to-≡;≅-to-subst-≡) renaming (sym to hsym; trans to htrans; cong to hcong)
@@ -80,7 +80,7 @@ data Value where
    → Value M
    → Value (wrap A B M)
 
-  V-con : ∀{tcn : ∅ ⊢Nf⋆ ♯}
+  V-con : ∀{tcn}
     → (cn : TermCon tcn)
     → Value (con cn)
 

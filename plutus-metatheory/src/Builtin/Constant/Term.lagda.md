@@ -1,18 +1,14 @@
 ```
-open import Builtin.Constant.Type
 ```
 
 ```
 module Builtin.Constant.Term
-  (Ctx⋆ : Set)
   (Kind : Set)
   (♯ : Kind)
   (_⇒_ : Kind → Kind → Kind)
-  (_⊢⋆_ : Ctx⋆ → Kind → Set)
-  (^ : ∀{Φ} → TyCon Kind ♯ _⇒_ ♯ → Φ ⊢⋆ ♯)
   where
 
-
+open import Builtin.Constant.Type Kind ♯ _⇒_
 open import Builtin
 
 open import Data.Integer
@@ -24,19 +20,19 @@ open import Utils using (ByteString;DATA)
 ## Term Constants
 
 ```
-data TermCon {Φ} : Φ ⊢⋆ ♯ → Set where
+data TermCon : TyCon ♯ → Set where
   integer    :
       (i : ℤ)
-    → TermCon (^ integer)
+    → TermCon integer
   bytestring :
       (b : ByteString)
-    → TermCon (^ bytestring)
+    → TermCon bytestring
   string     :
       (s : String)
-    → TermCon (^ string)
+    → TermCon string
   bool       :
       (b : Bool)
-    → TermCon (^ bool)
-  unit       : TermCon (^ unit)
-  Data       : DATA → TermCon (^ Data)
+    → TermCon bool
+  unit       : TermCon unit
+  Data       : DATA → TermCon Data
 ```

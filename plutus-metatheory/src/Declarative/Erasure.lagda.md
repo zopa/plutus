@@ -24,7 +24,7 @@ open import Type
 open import Declarative
 open import Builtin hiding (length)
 open import Utils
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^
+open import Builtin.Constant.Term Kind ♯ _⇒_
   renaming (TermCon to TyTermCon)
 
 open import Data.Empty
@@ -55,7 +55,7 @@ eraseVar Z     = nothing
 eraseVar (S α) = just (eraseVar α)
 eraseVar (T α) = eraseVar α
 
-eraseTC : ∀{Φ}{Γ : Ctx Φ}{A : Φ ⊢⋆ ♯} → TyTermCon A → TermCon
+eraseTC : ∀{A} → TyTermCon A → TermCon
 eraseTC (integer i)    = integer i
 eraseTC (bytestring b) = bytestring b
 eraseTC (string s)     = string s
@@ -80,7 +80,7 @@ erase (t ·⋆ A)        = force (erase t)
 erase (wrap A B t)    = erase t
 erase (unwrap t)      = erase t
 erase (conv p t)      = erase t
-erase {Γ = Γ} (con t) = con (eraseTC {Γ = Γ} t)
+erase (con t)         = con (eraseTC t)
 erase (builtin b)     = builtin b
 erase (error A)       = error
 

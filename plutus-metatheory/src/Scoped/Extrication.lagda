@@ -22,7 +22,7 @@ open import Builtin
 import Builtin.Constant.Type Kind ♯ _⇒_ as T
 import Builtin.Constant.Type ⊤ tt (λ _ _ → tt) as S
 
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as B
+open import Builtin.Constant.Term Kind ♯ _⇒_ as B
 open import Type.BetaNormal
 open import Type.RenamingSubstitution as T
 \end{code}
@@ -80,7 +80,7 @@ extricateVar Z = Z
 extricateVar (S x) = S (extricateVar x)
 extricateVar (T x) = T (extricateVar x)
 
-extricateC : ∀{Γ}{A : Γ ⊢Nf⋆ ♯} → B.TermCon A → Utils.TermCon
+extricateC : ∀{A} → B.TermCon A → Utils.TermCon
 extricateC (integer i)    = integer i
 extricateC (bytestring b) = bytestring b
 extricateC (string s)     = string s

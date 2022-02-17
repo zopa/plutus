@@ -21,7 +21,7 @@ open import Utils hiding (TermCon)
 open import Type
 import Type.RenamingSubstitution as ⋆
 open import Type.Equality
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^
+open import Builtin.Constant.Term Kind ♯ _⇒_
 open import Declarative
 ```
 
@@ -68,20 +68,6 @@ ext⋆ _ ρ (T x) = conv∋
   (T (ρ x))
 ```
 
-Renaming a term constant
-
-```
-renTermCon : (ρ⋆ : ⋆.Ren Φ Ψ)
-             ------------------------------------------
-           → (∀{A} → TermCon A → TermCon (⋆.ren ρ⋆ A ))
-renTermCon _ (integer i)    = integer i
-renTermCon _ (bytestring b) = bytestring b
-renTermCon _ (string s)     = string s
-renTermCon _ (bool b)       = bool b
-renTermCon _ unit           = unit
-renTermCon _ (Data d)       = Data d
-```
-
 Renaming for terms
 
 ```
@@ -98,7 +84,7 @@ ren ρ⋆ ρ (L ·⋆ A) =
 ren _ ρ (wrap A B L) = wrap _ _ (conv⊢ refl (⋆.ren-μ _ A B) (ren _ ρ L))
 ren _ ρ (unwrap L) = conv⊢ refl (sym (⋆.ren-μ _ _ _)) (unwrap (ren _ ρ L))
 ren _ ρ (conv p L) = conv (ren≡β _ p) (ren _ ρ L)
-ren ρ⋆ ρ (con cn) = con (renTermCon ρ⋆ cn)
+ren ρ⋆ ρ (con cn) = con cn
 ren ρ⋆ _ (builtin b) = conv⊢ refl (btype-ren b ρ⋆) (builtin b)
 ren _ _ (error A) = error (⋆.ren _ A)
 ```
@@ -160,21 +146,6 @@ exts⋆ _ σ (T {A = A} x) = conv⊢
   (weaken⋆ (σ x))
 ```
 
-Substitution for term constants
-
-```
-subTermCon : (σ⋆ : ⋆.Sub Φ Ψ)
-             -------------------------------------------
-           → ∀ {A} → TermCon A → TermCon (⋆.sub σ⋆ A )
-subTermCon _ (integer i)    = integer i
-subTermCon _ (bytestring b) = bytestring b
-subTermCon _ (string s)     = string s
-subTermCon _ (bool b)       = bool b
-subTermCon _ unit           = unit
-subTermCon _ (Data d)       = Data d
-
-```
-
 Substitution for terms
 
 ```
@@ -192,7 +163,7 @@ sub _  σ (wrap A B L) = wrap _ _ (conv⊢ refl (⋆.sub-μ _ A B) (sub _ σ L))
 sub _  σ (unwrap L)   =
   conv⊢ refl (sym (⋆.sub-μ _ (muPat L) (muArg L))) (unwrap (sub _ σ L))
 sub _  σ (conv p L)   = conv (sub≡β _ p) (sub _ σ L)
-sub σ⋆ _ (con cn)     = con (subTermCon σ⋆ cn)
+sub σ⋆ _ (con cn)     = con cn
 sub _  _ (builtin b) = conv⊢ refl (btype-sub b _) (builtin b)
 sub _  _ (error A)    = error (⋆.sub _ A)
 ```

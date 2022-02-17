@@ -68,17 +68,7 @@ lem[] A B = trans
     (sym (sub-eval B idCR (sub-cons ` A))))
 
 open import Builtin hiding (length)
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢⋆_ ^ as STermCon
-import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^) as NTermCon
-
-
-nfTypeTC : ∀{φ}{A : φ ⊢⋆ ♯} → STermCon.TermCon A → NTermCon.TermCon (nf A)
-nfTypeTC (STermCon.integer i)    = NTermCon.integer i
-nfTypeTC (STermCon.bytestring b) = NTermCon.bytestring b
-nfTypeTC (STermCon.string s)     = NTermCon.string s
-nfTypeTC (STermCon.bool b)       = NTermCon.bool b
-nfTypeTC STermCon.unit           = NTermCon.unit
-nfTypeTC (STermCon.Data d)       = NTermCon.Data d
+open import Builtin.Constant.Term Kind ♯ _⇒_
 
 open import Data.Product renaming (_,_ to _,,_)
 open import Data.List
@@ -136,7 +126,7 @@ nfType (Syn.unwrap {A = A}{B = B} t) = Norm.conv⊢
   (sym (stability-μ A B))
   (Norm.unwrap (nfType t) refl)
 nfType (Syn.conv p t) = Norm.conv⊢ refl (completeness p) (nfType t)
-nfType (Syn.con t) = Norm.con (nfTypeTC t)
+nfType (Syn.con t) = Norm.con t
 nfType (Syn.builtin b) = Norm.conv⊢ refl (btype-lem b) (Norm.builtin b / refl)
 nfType (Syn.error A) = Norm.error (nf A)
 

@@ -23,7 +23,7 @@ open import Type.BetaNBE.Soundness
 open import Type.BetaNBE.Completeness
 open import Type.BetaNBE.RenamingSubstitution
 open import Algorithmic
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⇒_ _⊢Nf⋆_ (ne ∘ ^)
+open import Builtin.Constant.Term Kind ♯ _⇒_
 open import Type.BetaNormal.Equality
 \end{code}
 
@@ -58,19 +58,6 @@ ext⋆ ρ⋆ ρ (T {A = A} x) = conv∋
 \end{code}
 
 \begin{code}
-renTermCon : ∀ {Φ Ψ}
-  → (ρ⋆ : ⋆.Ren Φ Ψ)
-    -----------------------------------------------------
-  → ({A : Φ ⊢Nf⋆ ♯} → TermCon A → TermCon (renNf ρ⋆ A ))
-renTermCon ρ⋆ (integer i)    = integer i
-renTermCon ρ⋆ (bytestring b) = bytestring b
-renTermCon ρ⋆ (string s)     = string s
-renTermCon ρ⋆ (bool b)       = bool b
-renTermCon ρ⋆ unit           = unit
-renTermCon ρ⋆ (Data d)       = Data d
-\end{code}
-
-\begin{code}
 ren : ∀ {Φ Ψ Γ Δ}
   → (ρ⋆ : ⋆.Ren Φ Ψ)
   → (ρ : Ren ρ⋆ Γ Δ)
@@ -92,7 +79,7 @@ ren ρ⋆ ρ (unwrap {A = A}{B} M refl) = conv⊢
   refl
   (sym (ren-nf-μ ρ⋆ A B))
   (unwrap (ren ρ⋆ ρ M) refl) 
-ren ρ⋆ ρ (con c) = con (renTermCon ρ⋆ c)
+ren ρ⋆ ρ (con c) = con c
 ren ρ⋆ ρ (builtin b / refl) = conv⊢ refl (btype-ren b ρ⋆) (builtin b / refl)
 ren ρ⋆ ρ (error A) = error (renNf ρ⋆ A)
 \end{code}
@@ -146,19 +133,6 @@ exts⋆ σ⋆ σ {K}(T {A = A} x) = conv⊢
 \end{code}
 
 \begin{code}
-subTermCon : ∀ {Φ Ψ}
-  → (σ⋆ : SubNf Φ Ψ)
-    ------------------------------------------------------
-  → ({A : Φ ⊢Nf⋆ ♯} → TermCon A → TermCon (subNf σ⋆ A ))
-subTermCon σ⋆ (integer i)    = integer i
-subTermCon σ⋆ (bytestring b) = bytestring b
-subTermCon σ⋆ (string s)     = string s
-subTermCon σ⋆ (bool b)       = bool b
-subTermCon σ⋆ unit           = unit
-subTermCon σ⋆ (Data d)       = Data d
-\end{code}
-
-\begin{code}
 sub : ∀ {Φ Ψ Γ Δ}
   → (σ⋆ : SubNf Φ Ψ)
   → (σ : Sub σ⋆ Γ Δ)
@@ -181,7 +155,7 @@ sub σ⋆ σ (unwrap {A = A}{B} M refl) = conv⊢
   refl
   (sym (sub-nf-μ σ⋆ A B))
   (unwrap (sub σ⋆ σ M) refl)
-sub σ⋆ σ (con c) = con (subTermCon σ⋆ c)
+sub σ⋆ σ (con c) = con c
 sub σ⋆ σ (builtin b / refl) = conv⊢ refl (btype-sub b σ⋆) (builtin b / refl)
 sub σ⋆ σ (error A) = error (subNf σ⋆ A)
 \end{code}
