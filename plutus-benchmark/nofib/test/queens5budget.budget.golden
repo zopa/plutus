@@ -1,3 +1,11 @@
+<<<<<<< HEAD
 ({ cpu: 161107571912
 | mem: 544076080
+||||||| parent of 47195a460 (Require case bodies to be code rather than values)
+({ cpu: 178571970145
+| mem: 544076080
+=======
+({ cpu: 163571260917
+| mem: 493692480
+>>>>>>> 47195a460 (Require case bodies to be code rather than values)
 })
