@@ -6,9 +6,12 @@ open import Utils hiding (TermCon)
 ```
 module Builtin.Constant.Term
   (Ctx⋆ Kind : Set)
-  (♯ : Kind)
+  (♯ * : Kind)
   (_⊢⋆_ : Ctx⋆ → Kind → Set)
-  (con : ∀{Φ} → TyCon Ctx⋆ (_⊢⋆ ♯) Φ → Φ ⊢⋆ ♯)
+  (^ : ∀{Φ} → TyCon Ctx⋆ (_⊢⋆ ♯) Φ → Φ ⊢⋆ ♯)
+  (con : ∀{Φ} → Φ ⊢⋆ ♯ → Φ ⊢⋆ *)
+  (Ctx : Ctx⋆ → Set)
+  (_⊢_ : ∀{Φ}(Γ : Ctx Φ) → Φ ⊢⋆ * → Set)
   where
 
 
@@ -22,19 +25,21 @@ open import Data.Bool
 ## Term Constants
 
 ```
-data TermCon {Φ} : Φ ⊢⋆ ♯ → Set where
+data TermCon {Φ}(Γ : Ctx Φ) : Φ ⊢⋆ ♯ → Set where
   integer    :
       (i : ℤ)
-    → TermCon (con integer)
+    → TermCon Γ (^ integer)
   bytestring :
       (b : ByteString)
-    → TermCon (con bytestring)
+    → TermCon Γ (^ bytestring)
   string     :
       (s : String)
-    → TermCon (con string)
+    → TermCon Γ (^ string)
   bool       :
       (b : Bool)
-    → TermCon (con bool)
-  unit       : TermCon (con unit)
-  Data       : DATA → TermCon (con Data)
+    → TermCon Γ (^ bool)
+  unit       : TermCon Γ (^ unit)
+  Data       : DATA → TermCon Γ (^ Data)
+  nil        : ∀{a} → TermCon Γ (^ (list a))
+  cons'      : ∀{a} → Γ ⊢ con a → TermCon Γ (^ (list a)) → TermCon Γ (^ (list a))
 ```
