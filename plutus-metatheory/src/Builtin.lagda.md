@@ -147,7 +147,7 @@ postulate
   TRACE      : {a : Set} → String → a → a
 
   concat    : ByteString → ByteString → ByteString
-  cons  : Int → ByteString → ByteString
+  consBS    : Int → ByteString → ByteString
   slice     : Int → Int → ByteString → ByteString
   B<        : ByteString -> ByteString -> Bool
   B>        : ByteString -> ByteString -> Bool
@@ -195,7 +195,7 @@ postulate
 {-# COMPILE GHC equals = (==) #-}
 {-# COMPILE GHC B< = (<) #-}
 {-# COMPILE GHC B> = (>) #-}
-{-# COMPILE GHC cons = \n xs -> BS.cons (fromIntegral @Integer n) xs #-}
+{-# COMPILE GHC consBS = \n xs -> BS.cons (fromIntegral @Integer n) xs #-}
 {-# COMPILE GHC slice = \start n xs -> BS.take (fromIntegral n) (BS.drop (fromIntegral start) xs) #-}
 {-# COMPILE GHC index = \xs n -> fromIntegral (BS.index xs (fromIntegral n)) #-}
 {-# FOREIGN GHC import Crypto #-}

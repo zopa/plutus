@@ -18,7 +18,6 @@ open import Type.Equality
 open import Builtin
 open import Utils hiding (TermCon)
 open import Builtin.Constant.Type
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^
 
 open import Relation.Binary.PropositionalEquality
   hiding ([_]) renaming (subst to substEq)
@@ -156,7 +155,11 @@ application.
 
 
 ```
-data _⊢_ (Γ : Ctx Φ) : Φ ⊢⋆ * → Set where
+data _⊢_ (Γ : Ctx Φ) : Φ ⊢⋆ * → Set
+
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ * _⊢⋆_ ^ con Ctx _⊢_
+
+data _⊢_ {Φ} Γ where
 
   ` : Γ ∋ A
       ------
@@ -196,7 +199,7 @@ data _⊢_ (Γ : Ctx Φ) : Φ ⊢⋆ * → Set where
        → Γ ⊢ B
 
   con : ∀ {c}
-      →  TermCon {Φ} c
+      →  TermCon Γ c
         ---------------
       → Γ ⊢ con c
 

@@ -41,5 +41,6 @@ data TermCon {Φ}(Γ : Ctx Φ) : Φ ⊢⋆ ♯ → Set where
   unit       : TermCon Γ (^ unit)
   Data       : DATA → TermCon Γ (^ Data)
   nil        : ∀{a} → TermCon Γ (^ (list a))
-  cons'      : ∀{a} → Γ ⊢ con a → TermCon Γ (^ (list a)) → TermCon Γ (^ (list a))
+  cons       : ∀{a} → Γ ⊢ con a → TermCon Γ (^ (list a)) → TermCon Γ (^ (list a))
+  comma      : ∀{a b} → Γ ⊢ con a → Γ ⊢ con b → TermCon Γ (^ (pair a b))
 ```

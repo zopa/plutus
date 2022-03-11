@@ -20,7 +20,6 @@ open import Type.BetaNBE
 open import Type.BetaNBE.RenamingSubstitution renaming (_[_]Nf to _[_])
 open import Builtin
 open import Builtin.Constant.Type Ctx⋆ (_⊢Nf⋆ ♯)
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢Nf⋆_ ^
 \end{code}
 
 ## Fixity declarations
@@ -173,8 +172,11 @@ postulate btype-sub : ∀{Φ Ψ} b (ρ : SubNf Φ Ψ) → btype b ≡ subNf ρ (
 
 infixl 7 _·⋆_/_
 
-data _⊢_ {Φ} (Γ : Ctx Φ) : Φ ⊢Nf⋆ * → Set where
+data _⊢_ {Φ} (Γ : Ctx Φ) : Φ ⊢Nf⋆ * → Set
 
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ * _⊢Nf⋆_ ^ con Ctx _⊢_
+
+data _⊢_ {Φ} Γ where
   ` : ∀ {A : Φ ⊢Nf⋆ *}
     → Γ ∋ A
       -----
@@ -221,7 +223,7 @@ data _⊢_ {Φ} (Γ : Ctx Φ) : Φ ⊢Nf⋆ * → Set where
     → Γ ⊢ C
 
   con : ∀{tcn}
-    → TermCon {Φ} tcn
+    → TermCon Γ tcn
       ---------------------
     → Γ ⊢ con tcn
 
@@ -288,5 +290,21 @@ one : ∅ ⊢ con (^ integer)
 one = con (integer (ℤ.pos 1))
 
 one' : ∅ ⊢ con (^ integer)
-one' = (id' ·⋆ con (^ integer) / refl) · con (integer (ℤ.pos 1))
+one' = (id' ·⋆ con (^ integer) / refl) · one
+
+pairof1s : ∅ ⊢ con (^ (pair (^ integer) (^ integer)))
+pairof1s = con (comma one one)
+
+nilInt : ∅ ⊢ con (^ (list (^ integer)))
+nilInt = con nil
+
+singleton1 : ∅ ⊢ con (^ (list (^ integer)))
+singleton1 = con (cons one nil)
+
+ones : ∅ ⊢ con (^ (list (^ integer)))
+ones = con (cons one (cons one nil))
+
+onesp : ∅ ⊢ con (^ (list (^ (pair (^ integer) (^ integer)))))
+onesp = con (cons pairof1s (cons pairof1s nil))
+
 \end{code}
