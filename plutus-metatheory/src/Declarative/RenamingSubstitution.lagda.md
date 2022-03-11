@@ -21,8 +21,8 @@ open import Utils hiding (TermCon)
 open import Type
 import Type.RenamingSubstitution as ⋆
 open import Type.Equality
-open import Builtin.Constant.Term Ctx⋆ Kind ♯ _⊢⋆_ ^
 open import Declarative
+open import Builtin.Constant.Term Ctx⋆ Kind ♯ * _⊢⋆_ ^ con Ctx _⊢_
 ```
 
 
@@ -68,27 +68,34 @@ ext⋆ _ ρ (T x) = conv∋
   (T (ρ x))
 ```
 
-Renaming a term constant
-
-```
-renTermCon : (ρ⋆ : ⋆.Ren Φ Ψ)
-             ------------------------------------------
-           → (∀{A} → TermCon A → TermCon (⋆.ren ρ⋆ A ))
-renTermCon _ (integer i)    = integer i
-renTermCon _ (bytestring b) = bytestring b
-renTermCon _ (string s)     = string s
-renTermCon _ (bool b)       = bool b
-renTermCon _ unit           = unit
-renTermCon _ (Data d)       = Data d
-```
-
-Renaming for terms
+Renaming a terms and term constants
 
 ```
 ren : (ρ⋆ : ⋆.Ren Φ Ψ)
     → Ren Γ Δ ρ⋆
       -------------------------------
     → (∀{A} → Γ ⊢ A → Δ ⊢ ⋆.ren ρ⋆ A)
+
+renTermCon : (ρ⋆ : ⋆.Ren Φ Ψ)
+           → Ren Γ Δ ρ⋆ 
+             ------------------------------------------
+           → (∀{A} → TermCon Γ A → TermCon Δ (⋆.ren ρ⋆ A ))
+
+
+renTermCon _ _ (integer i)    = integer i
+renTermCon _ _ (bytestring b) = bytestring b
+renTermCon _ _ (string s)     = string s
+renTermCon _ _ (bool b)       = bool b
+renTermCon _ _ unit           = unit
+renTermCon _ _ (Data d)       = Data d
+renTermCon ρ⋆ ρ nil = nil
+renTermCon ρ⋆ ρ (cons x xs) = cons (ren ρ⋆ ρ x) (renTermCon ρ⋆ ρ xs)
+renTermCon ρ⋆ ρ (comma x y) = comma (ren ρ⋆ ρ x) (ren ρ⋆ ρ y)
+```
+
+Renaming for terms
+
+```
 ren _ ρ (` x) = ` (ρ x)
 ren _ ρ (ƛ L) = ƛ (ren _ (ext _ ρ) L)
 ren _ ρ (L · M) = ren _ ρ L · ren _ ρ M 
@@ -98,7 +105,7 @@ ren ρ⋆ ρ (L ·⋆ A) =
 ren _ ρ (wrap A B L) = wrap _ _ (conv⊢ refl (⋆.ren-μ _ A B) (ren _ ρ L))
 ren _ ρ (unwrap L) = conv⊢ refl (sym (⋆.ren-μ _ _ _)) (unwrap (ren _ ρ L))
 ren _ ρ (conv p L) = conv (ren≡β _ p) (ren _ ρ L)
-ren ρ⋆ ρ (con cn) = con (renTermCon ρ⋆ cn)
+ren ρ⋆ ρ (con cn) = con (renTermCon ρ⋆ ρ cn)
 ren ρ⋆ _ (builtin b) = conv⊢ refl (btype-ren b ρ⋆) (builtin b)
 ren _ _ (error A) = error (⋆.ren _ A)
 ```
@@ -160,28 +167,32 @@ exts⋆ _ σ (T {A = A} x) = conv⊢
   (weaken⋆ (σ x))
 ```
 
-Substitution for term constants
-
-```
-subTermCon : (σ⋆ : ⋆.Sub Φ Ψ)
-             -------------------------------------------
-           → ∀ {A} → TermCon A → TermCon (⋆.sub σ⋆ A )
-subTermCon _ (integer i)    = integer i
-subTermCon _ (bytestring b) = bytestring b
-subTermCon _ (string s)     = string s
-subTermCon _ (bool b)       = bool b
-subTermCon _ unit           = unit
-subTermCon _ (Data d)       = Data d
-
-```
-
-Substitution for terms
+Substitution for terms and term constants
 
 ```
 sub : (σ⋆ : ⋆.Sub Φ Ψ)
     → Sub Γ Δ σ⋆
       -----------------------------
     → ∀{A} → Γ ⊢ A → Δ ⊢ ⋆.sub σ⋆ A
+subTermCon : (σ⋆ : ⋆.Sub Φ Ψ)
+           → Sub Γ Δ σ⋆
+             -------------------------------------------
+           → ∀ {A} → TermCon Γ A → TermCon Δ (⋆.sub σ⋆ A )
+subTermCon _ _ (integer i)    = integer i
+subTermCon _ _ (bytestring b) = bytestring b
+subTermCon _ _ (string s)     = string s
+subTermCon _ _ (bool b)       = bool b
+subTermCon _ _ unit           = unit
+subTermCon _ _ (Data d)       = Data d
+subTermCon σ⋆ σ nil = nil
+subTermCon σ⋆ σ (cons x xs) = cons (sub σ⋆ σ x) (subTermCon σ⋆ σ xs)
+subTermCon σ⋆ σ (comma x y) = comma (sub σ⋆ σ x) (sub σ⋆ σ y)
+
+```
+
+Substitution for terms
+
+```
 sub _  σ (` k)        = σ k
 sub _  σ (ƛ L)        = ƛ (sub _ (exts _ σ) L)
 sub _  σ (L · M)      = sub _ σ L · sub _ σ M
@@ -192,7 +203,7 @@ sub _  σ (wrap A B L) = wrap _ _ (conv⊢ refl (⋆.sub-μ _ A B) (sub _ σ L))
 sub _  σ (unwrap L)   =
   conv⊢ refl (sym (⋆.sub-μ _ (muPat L) (muArg L))) (unwrap (sub _ σ L))
 sub _  σ (conv p L)   = conv (sub≡β _ p) (sub _ σ L)
-sub σ⋆ _ (con cn)     = con (subTermCon σ⋆ cn)
+sub σ⋆ σ (con cn)     = con (subTermCon σ⋆ σ cn)
 sub _  _ (builtin b) = conv⊢ refl (btype-sub b _) (builtin b)
 sub _  _ (error A)    = error (⋆.sub _ A)
 ```
