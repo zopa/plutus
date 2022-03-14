@@ -173,7 +173,7 @@ instance ExMemoryUsage Integer where
    things whose sizes are multiples of 8. -}
 instance ExMemoryUsage BS.ByteString where
   memoryUsage bs = ExMemory $ ((n-1) `quot` 8) + 1  -- Don't use `div` here!  That gives 1 instead of 0 for n=0.
-      where n = fromIntegral $ BS.length bs :: SatInt
+      where n = fromIntegral $ BS.length bs :: CostingInteger
 
 instance ExMemoryUsage T.Text where
   -- This is slow and inaccurate, but matches the version that was originally deployed.
