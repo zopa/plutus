@@ -22,20 +22,10 @@
         [
           [
             { [ { B_match (con integer) } ds ] (con integer) }
-            (lam
-              p
-              (prod (con integer))
-              (let
-                (nonrec)
-                (termbind (strict) (vardecl a (con integer)) (proj 0 p))
-                a
-              )
-            )
+            (lam a (con integer) a)
           ]
           (lam
-            p
-            (prod [ B [ [ Tuple2 (con integer) ] (con integer) ] ])
-            (con integer 2)
+            ds [ B [ [ Tuple2 (con integer) ] (con integer) ] ] (con integer 2)
           )
         ]
       )

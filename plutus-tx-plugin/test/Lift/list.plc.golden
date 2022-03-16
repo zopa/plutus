@@ -20,9 +20,9 @@
             )
           )
         )
-        (delay (tag 0 (prod )))
+        (delay (constr 0))
       ]
-      (delay (lam arg_0_i0 (lam arg_1_i0 (tag 1 (prod arg_0_i2 arg_1_i1)))))
+      (delay (lam arg_0_i0 (lam arg_1_i0 (constr 1 arg_0_i2 arg_1_i1))))
     ]
     (delay
       (lam
@@ -34,8 +34,11 @@
               case_GHC_Types_Cons_i0
               (case
                 x_i3
-                (lam e_i0 [ case_GHC_Types_Nil_i3 e_i1 ])
-                (lam e_i0 [ case_GHC_Types_Cons_i2 e_i1 ])
+                case_GHC_Types_Nil_i2
+                (lam
+                  arg2_i0
+                  (lam arg1_i0 [ [ case_GHC_Types_Cons_i3 arg2_i2 ] arg1_i1 ])
+                )
               )
             )
           )

@@ -118,11 +118,9 @@ genTerm = simpleRecursive nonRecursive recursive where
     unwrapGen = Unwrap () <$> genTerm
     wrapGen = IWrap () <$> genType <*> genType <*> genTerm
     errorGen = Error () <$> genType
-    prodGen = Prod () <$> Gen.list (Range.linear 0 10) genTerm
-    projGen = Proj () <$> Gen.int (Range.linear 0 10) <*> genTerm
-    tagGen = Tag () <$> genType <*> Gen.int (Range.linear 0 10) <*> genTerm
-    caseGen = Case () <$> genTerm <*> Gen.list (Range.linear 0 10) genTerm
-    recursive = [absGen, instGen, lamGen, applyGen, unwrapGen, wrapGen, prodGen, projGen, tagGen, caseGen]
+    constrGen = Constr () <$> genType <*> Gen.int (Range.linear 0 10) <*> Gen.list (Range.linear 0 10) genTerm
+    caseGen = Case () <$> genType <*> genTerm <*> Gen.list (Range.linear 0 10) genTerm
+    recursive = [absGen, instGen, lamGen, applyGen, unwrapGen, wrapGen, constrGen, caseGen]
     nonRecursive = [varGen, Constant () <$> genConstant, Builtin () <$> genBuiltin, errorGen]
 
 genProgram :: AstGen (Program TyName Name DefaultUni DefaultFun ())

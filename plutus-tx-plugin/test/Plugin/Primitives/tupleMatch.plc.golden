@@ -16,13 +16,7 @@
         {
           [ { { Tuple2_match (con integer) } (con integer) } ds ] (con integer)
         }
-        (lam
-          p
-          (prod (con integer) (con integer))
-          (let
-            (nonrec) (termbind (strict) (vardecl a (con integer)) (proj 0 p)) a
-          )
-        )
+        (lam a (con integer) (lam ds (con integer) a))
       ]
     )
   )

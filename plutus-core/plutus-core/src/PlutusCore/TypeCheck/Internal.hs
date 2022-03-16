@@ -424,53 +424,43 @@ inferTypeM (Error ann ty) = do
     checkKindM ann ty $ Type ()
     normalizeTypeM $ void ty
 
-inferTypeM (Prod _ args) = do
-    tys <- for args $ \t -> do
-        ty <- inferTypeM t
-        pure $ unNormalized ty
-    pure $ Normalized $ TyProd () tys
+inferTypeM t@(Constr ann ty i args) = do
+    vResTy <- normalizeTypeM $ void ty
 
-inferTypeM (Proj ann i term) = do
-    vTermTy <- inferTypeM term
-    case unNormalized vTermTy of
-        TyProd _ vTys -> case vTys !? i of
-            Just t  -> pure $ Normalized t
-            Nothing -> throwing _TypeError (TypeMismatch ann (void term) (TyProd () (replicate i dummyType)) vTermTy)
-        _ -> throwing _TypeError (TypeMismatch ann (void term) (TyProd () (replicate i dummyType)) vTermTy)
+    -- We don't know exactly what to expect, we only know what the i-th sum should look like, so we
+    -- assert that we should have some types in the sum up to there, and then the known product type.
+    let expectedType = TySum () (replicate (i-1) dummyType ++ [TyProd () (replicate (length args) dummyType)])
+    case unNormalized vResTy of
+        TySum _ vSTys -> case vSTys !? i of
+            Just (TyProd _ pTys) -> case zipExact args pTys of
+                Just ps -> for_ ps $ \(arg, pTy) -> do
+                    argTy <- inferTypeM arg
+                    unless (unNormalized argTy == pTy) $ throwing _TypeError (TypeMismatch ann (void arg) pTy argTy)
+                Nothing -> throwing _TypeError (TypeMismatch ann (void t) expectedType vResTy)
+            _ -> throwing _TypeError (TypeMismatch ann (void t) expectedType vResTy)
+        _ -> throwing _TypeError (TypeMismatch ann (void t) expectedType vResTy)
 
-inferTypeM t@(Tag ann ty i term) = do
-    vTermTy <- inferTypeM term
-    vSumTy <- normalizeTypeM $ void ty
-    case unNormalized vSumTy of
-        TySum _ vTys -> case vTys !? i of
-            Just ity  -> do
-                unless (ity == unNormalized vTermTy) $ throwing _TypeError (TypeMismatch ann (void term) ity vTermTy)
-                pure vSumTy
-            Nothing -> throwing _TypeError (TypeMismatch ann (void t) (TySum () (replicate i dummyType)) vSumTy)
-        _ -> throwing _TypeError (TypeMismatch ann (void t) (TySum () (replicate i dummyType)) vSumTy)
+    pure vResTy
 
-inferTypeM (Case ann arg cs) = do
-    vTermTy <- inferTypeM arg
-    caseTys <- traverse inferTypeM cs
-    case unNormalized vTermTy of
-        TySum _ vTys -> case zipExact vTys caseTys of
-            Just ps -> do
-                cRess <- for ps $ \(ty, cty) -> case unNormalized cty of
-                    TyFun _ dom cod -> do
-                        unless (dom == ty) $ throwing _TypeError (TypeMismatch ann (void arg) (TyFun () ty dummyType) cty)
-                        pure cod
-                    _ -> throwing _TypeError (TypeMismatch ann (void arg) (TyFun () ty dummyType) cty)
-                case theElement cRess of
-                    Just e -> pure $ Normalized e
-                    Nothing -> throwing _TypeError (TypeMismatch ann (void arg) (TySum () (replicate (length cs) dummyType)) vTermTy)
-            Nothing -> throwing _TypeError (TypeMismatch ann (void arg) (TySum () (replicate (length cs) dummyType)) vTermTy)
-        _ -> throwing _TypeError (TypeMismatch ann (void arg) (TySum () (replicate (length cs) dummyType)) vTermTy)
-    where
-        theElement :: Eq a => [a] -> Maybe a
-        theElement [] = Nothing
-        theElement (a:as) = case theElement as of
-            Just a' -> if a == a' then Just a else Nothing
-            Nothing -> Just a
+inferTypeM (Case ann ty arg cases) = do
+    vResTy <- normalizeTypeM $ void ty
+    vArgTy <- inferTypeM arg
+
+    let expectedType = TySum () (replicate (length cases) dummyType)
+    case unNormalized vArgTy of
+        TySum _ sTys -> case zipExact cases sTys of
+            Just ps -> for_ ps $ \(c, sty) -> case sty of
+                TyProd _ pTys -> do
+                    cTy <- inferTypeM c
+
+                    let expectedCTy = mkIterTyFun () pTys (unNormalized vResTy)
+                    unless (unNormalized cTy == expectedCTy) $
+                        throwing _TypeError (TypeMismatch ann (void c) expectedCTy cTy)
+                _ -> throwing _TypeError (TypeMismatch ann (void arg) expectedType vArgTy)
+            Nothing -> throwing _TypeError (TypeMismatch ann (void arg) expectedType vArgTy)
+        _ -> throwing _TypeError (TypeMismatch ann (void arg) expectedType vArgTy)
+
+    pure vResTy
 
 -- See the [Global uniqueness] and [Type rules] notes.
 -- | Check a 'Term' against a 'NormalizedType'.

@@ -31,21 +31,16 @@
             (lam
               k
               (fun a [ Maybe b ])
-              [
+              {
                 [
-                  { [ { Maybe_match a } ds ] [ Maybe b ] }
-                  (lam
-                    p
-                    (prod a)
-                    (let
-                      (nonrec)
-                      (termbind (strict) (vardecl x a) (proj 0 p))
-                      [ k x ]
-                    )
-                  )
+                  [
+                    { [ { Maybe_match a } ds ] (all dead (type) [ Maybe b ]) }
+                    (lam x a (abs dead (type) [ k x ]))
+                  ]
+                  (abs dead (type) { Nothing b })
                 ]
-                (lam p (prod ) { Nothing b })
-              ]
+                (all dead (type) dead)
+              }
             )
           )
         )
@@ -92,12 +87,11 @@
                 [ Maybe (con integer) ]
               }
               (lam
-                p
-                (prod (con integer) (con integer))
-                (let
-                  (nonrec)
-                  (termbind (strict) (vardecl x (con integer)) (proj 0 p))
-                  (termbind (strict) (vardecl x (con integer)) (proj 1 p))
+                x
+                (con integer)
+                (lam
+                  x
+                  (con integer)
                   [
                     [ { { fMonadMaybe_c (con integer) } (con integer) } ds ]
                     (lam

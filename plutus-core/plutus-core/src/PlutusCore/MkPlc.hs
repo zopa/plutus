@@ -39,7 +39,6 @@ module PlutusCore.MkPlc
     , mkIterApp
     , mkIterTyFun
     , mkIterLamAbs
-    , mkProdLamAbs
     , mkIterInst
     , mkIterTyAbs
     , mkIterTyApp
@@ -65,10 +64,8 @@ class TermLike term tyname name uni fun | term -> tyname name uni fun where
     unwrap   :: ann -> term ann -> term ann
     iWrap    :: ann -> Type tyname uni ann -> Type tyname uni ann -> term ann -> term ann
     error    :: ann -> Type tyname uni ann -> term ann
-    prod     :: ann -> [term ann] -> term ann
-    proj     :: ann -> Int -> term ann -> term ann
-    tag      :: ann -> Type tyname uni ann -> Int -> term ann -> term ann
-    kase     :: ann -> term ann -> [term ann] -> term ann
+    constr   :: ann -> Type tyname uni ann -> Int -> [term ann] -> term ann
+    kase     :: ann -> Type tyname uni ann -> term ann -> [term ann] -> term ann
 
     termLet  :: ann -> TermDef term tyname name uni fun ann -> term ann -> term ann
     typeLet  :: ann -> TypeDef tyname uni ann -> term ann -> term ann
@@ -113,9 +110,7 @@ instance TermLike (Term tyname name uni fun) tyname name uni fun where
     unwrap   = Unwrap
     iWrap    = IWrap
     error    = Error
-    prod     = Prod
-    proj     = Proj
-    tag      = Tag
+    constr   = Constr
     kase     = Case
 
 embed :: TermLike term tyname name uni fun => Term tyname name uni fun ann -> term ann
@@ -130,10 +125,8 @@ embed = \case
     Error a ty        -> error a ty
     Unwrap a t        -> unwrap a (embed t)
     IWrap a ty1 ty2 t -> iWrap a ty1 ty2 (embed t)
-    Prod a es         -> prod a (fmap embed es)
-    Proj a i p        -> proj a i (embed p)
-    Tag a ty i p      -> tag a ty i (embed p)
-    Case a arg cs     -> kase a (embed arg) (fmap embed cs)
+    Constr a ty i es  -> constr a ty i (fmap embed es)
+    Case a ty arg cs  -> kase a ty (embed arg) (fmap embed cs)
 
 -- | Make a 'Var' referencing the given 'VarDecl'.
 mkVar :: TermLike term tyname name uni fun => ann -> VarDecl tyname name uni fun ann -> term ann
@@ -241,17 +234,6 @@ mkIterLamAbs
     -> term ann
 mkIterLamAbs args body =
     foldr (\(VarDecl ann name ty) acc -> lamAbs ann name ty acc) body args
-
--- | Bind a list of variables via a product.
-mkProdLamAbs
-    :: TermLike term tyname name uni fun
-    => ann
-    -> name
-    -> [VarDecl tyname name uni fun ann]
-    -> term ann
-    -> term ann
-mkProdLamAbs ann name args body =
-    lamAbs ann name (TyProd ann (fmap _varDeclType args)) $ foldr (\(vd, i) acc -> termLet ann (Def vd (proj ann i (var ann name))) acc) body (zip args [0..])
 
 -- | Type abstract a list of names.
 mkIterTyAbs

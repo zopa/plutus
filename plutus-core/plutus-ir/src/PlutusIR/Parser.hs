@@ -88,17 +88,11 @@ unwrapTerm tm = inParens $ PIR.unwrap <$> wordPos "unwrap" <*> tm
 errorTerm :: Parametric
 errorTerm _tm = inParens $ PIR.error <$> wordPos "error" <*> pType
 
-prodTerm :: Parametric
-prodTerm tm = inParens (PIR.prod <$> wordPos "prod" <*> many tm)
-
-projTerm :: Parametric
-projTerm tm = inParens (PIR.proj <$> wordPos "proj" <*> lexeme Lex.decimal <*> tm)
-
-tagTerm :: Parametric
-tagTerm tm = inParens (PIR.tag <$> wordPos "tag" <*> pType <*> lexeme Lex.decimal <*> tm)
+constrTerm :: Parametric
+constrTerm tm = inParens (PIR.constr <$> wordPos "constr" <*>pType <*> lexeme Lex.decimal <*>  many tm)
 
 caseTerm :: Parametric
-caseTerm tm = inParens (PIR.kase <$> wordPos "case" <*> tm <*> many tm)
+caseTerm tm = inParens (PIR.kase <$> wordPos "case" <*> pType <*> tm <*> many tm)
 
 letTerm
     :: Parser PTerm
@@ -119,9 +113,7 @@ term' other = choice $ map try [
     , iwrapTerm self
     , builtinTerm self
     , unwrapTerm self
-    , prodTerm self
-    , projTerm self
-    , tagTerm self
+    , constrTerm self
     , caseTerm self
     , errorTerm self
     , inParens other

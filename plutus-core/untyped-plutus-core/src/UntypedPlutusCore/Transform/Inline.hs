@@ -236,16 +236,12 @@ costIsAcceptable = \case
   LamAbs{}   -> True
 
   Apply{}    -> False
-  -- Inlining products of size 1 or 0 seems okay, but does result in doing
+  -- Inlining constructors of size 1 or 0 seems okay, but does result in doing
   -- the work for the elements at each use site.
-  Prod _ es  -> case es of
+  Constr _ _ es  -> case es of
       []  -> True
       [e] -> costIsAcceptable e
       _   -> False
-  -- Inlining tags and projections is acceptable, but does result in doing the work for the
-  -- body at each use site.
-  Tag _ _ e -> costIsAcceptable e
-  Proj _ _ e -> costIsAcceptable e
   Case{} -> False
 
   Force{}    -> True
@@ -262,14 +258,11 @@ sizeIsAcceptable = \case
   -- See Note [Differences from PIR inliner] 4
   LamAbs{}   -> False
 
-  -- Inlining products of size 1 or 0 seems okay
-  Prod _ es  -> case es of
+  -- Inlining constructors of size 1 or 0 seems okay
+  Constr _ _ es  -> case es of
       []  -> True
       [e] -> sizeIsAcceptable e
       _   -> False
-  -- Inlining tags and projections is acceptable
-  Tag _ _ e -> sizeIsAcceptable e
-  Proj _ _ e -> costIsAcceptable e
   Case{} -> False
 
   -- Constants can be big! We could check the size here and inline if they're

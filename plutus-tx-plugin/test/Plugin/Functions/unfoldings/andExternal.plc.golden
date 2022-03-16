@@ -18,10 +18,15 @@
         (lam
           b
           Bool
-          [
-            [ { [ Bool_match a ] Bool } (lam p (prod ) b) ]
-            (lam p (prod ) False)
-          ]
+          {
+            [
+              [
+                { [ Bool_match a ] (all dead (type) Bool) } (abs dead (type) b)
+              ]
+              (abs dead (type) False)
+            ]
+            (all dead (type) dead)
+          }
         )
       )
     )

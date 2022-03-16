@@ -209,8 +209,7 @@ data CekValue uni fun =
       (CekValEnv uni fun)    -- For discharging.
       !(BuiltinRuntime (CekValue uni fun))  -- The partial application and its costing function.
                                             -- Check the docs of 'BuiltinRuntime' for details.
-  | VProd {-# UNPACK #-} !(V.Vector (CekValue uni fun))
-  | VTag {-# UNPACK #-} !Int !(CekValue uni fun)
+  | VConstr {-# UNPACK #-} !Int {-# UNPACK #-} !(V.Vector (CekValue uni fun))
     deriving stock (Show)
 
 type CekValEnv uni fun = Env.RAList (CekValue uni fun)
@@ -490,8 +489,7 @@ dischargeCekValue = \case
     -- We only discharge a value when (a) it's being returned by the machine,
     -- or (b) it's needed for an error message.
     VBuiltin _ term env _                -> dischargeCekValEnv env term
-    VProd es                             -> Prod () (toList $ fmap dischargeCekValue es)
-    VTag i e                             -> Tag () i (dischargeCekValue e)
+    VConstr i es                         -> Constr () i (toList $ fmap dischargeCekValue es)
 
 instance (Closed uni, GShow uni, uni `Everywhere` PrettyConst, Pretty fun) =>
             PrettyBy PrettyConfigPlc (CekValue uni fun) where
@@ -533,9 +531,7 @@ data Context uni fun s
     = FrameApplyFun !(CekValue uni fun) !(Context uni fun s)                         -- ^ @[V _]@
     | FrameApplyArg !(CekValEnv uni fun) (Term NamedDeBruijn uni fun ()) !(Context uni fun s) -- ^ @[_ N]@
     | FrameForce !(Context uni fun s)                                               -- ^ @(force _)@
-    | FrameProd !(CekValEnv uni fun) {-# UNPACK #-} !(Accumulator (Term NamedDeBruijn uni fun ()) (CekValue uni fun) s) !(Context uni fun s)
-    | FrameProj {-# UNPACK #-} !Int !(Context uni fun s)
-    | FrameTag {-# UNPACK #-} !Int !(Context uni fun s)
+    | FrameConstr !(CekValEnv uni fun) {-# UNPACK #-} !Int {-# UNPACK #-} !(Accumulator (Term NamedDeBruijn uni fun ()) (CekValue uni fun) s) !(Context uni fun s)
     | FrameCases !(CekValEnv uni fun) ![Term NamedDeBruijn uni fun ()] !(Context uni fun s)
     | NoFrame
     -- deriving stock (Show)
@@ -546,8 +542,7 @@ toExMemory = \case
     VDelay {}   -> 1
     VLamAbs {}  -> 1
     VBuiltin {} -> 1
-    VProd {}    -> 1
-    VTag {}     -> 1
+    VConstr {}  -> 1
 {-# INLINE toExMemory #-}  -- It probably gets inlined anyway, but an explicit pragma
                            -- shouldn't hurt.
 
@@ -659,18 +654,12 @@ enterComputeCek = computeCek (toWordArray 0) where
     -- s ; ρ ▻ error A  ↦  <> A
     computeCek !_ !_ !_ (Error _) =
         throwing_ _EvaluationFailure
-    computeCek !unbudgetedSteps !ctx !env (Prod _ es) = do
+    computeCek !unbudgetedSteps !ctx !env (Constr _ i es) = do
         !unbudgetedSteps' <- stepAndMaybeSpend BApply unbudgetedSteps
         acc <- CekM $ newAccumulator es
         case acc of
-            Left res        -> returnCek unbudgetedSteps ctx $ VProd res
-            Right (t, acc') -> computeCek unbudgetedSteps' (FrameProd env acc' ctx) env t
-    computeCek !unbudgetedSteps !ctx !env (Proj _ i t) = do
-        !unbudgetedSteps' <- stepAndMaybeSpend BApply unbudgetedSteps
-        computeCek unbudgetedSteps' (FrameProj i ctx) env t
-    computeCek !unbudgetedSteps !ctx !env (Tag _ i t) = do
-        !unbudgetedSteps' <- stepAndMaybeSpend BApply unbudgetedSteps
-        computeCek unbudgetedSteps' (FrameTag i ctx) env t
+            Left res        -> returnCek unbudgetedSteps ctx $ VConstr i res
+            Right (t, acc') -> computeCek unbudgetedSteps' (FrameConstr env i acc' ctx) env t
     computeCek !unbudgetedSteps !ctx !env (Case _ arg cs) = do
         !unbudgetedSteps' <- stepAndMaybeSpend BApply unbudgetedSteps
         computeCek unbudgetedSteps' (FrameCases env cs ctx) env arg
@@ -703,22 +692,21 @@ enterComputeCek = computeCek (toWordArray 0) where
     -- FIXME: add rule for VBuiltin once it's in the specification.
     returnCek !unbudgetedSteps (FrameApplyFun fun ctx) arg =
         applyEvaluate unbudgetedSteps ctx fun arg
-    returnCek !unbudgetedSteps (FrameProd env acc ctx) e = do
+    returnCek !unbudgetedSteps (FrameConstr env i acc ctx) e = do
         r <- CekM $ stepAccumulator acc e
         case r of
-            Right (next, acc') -> computeCek unbudgetedSteps (FrameProd env acc' ctx) env next
-            Left done          -> returnCek unbudgetedSteps ctx $ VProd done
-    returnCek !unbudgetedSteps (FrameProj i ctx) p = case p of
-        -- TODO: causes
-        VProd es -> case es ^? ix i of
-            Just e  -> returnCek unbudgetedSteps ctx e
-            Nothing -> throwingWithCause _MachineError (ProductIndexOutOfBoundsMachineError i) Nothing
-        _ -> throwingWithCause _MachineError NonProductIndexedMachineError Nothing
-    returnCek !unbudgetedSteps (FrameTag i ctx) e = returnCek unbudgetedSteps ctx (VTag i e)
+            Right (next, acc') -> computeCek unbudgetedSteps (FrameConstr env i acc' ctx) env next
+            Left done          -> returnCek unbudgetedSteps ctx $ VConstr i done
     returnCek !unbudgetedSteps (FrameCases env cs ctx) e = case e of
-        (VTag i arg) -> case cs ^? ix i of
-            Just (LamAbs _ _ body) -> computeCek unbudgetedSteps ctx (Env.cons arg env) body
-            Just t                 -> throwingWithCause _MachineError (MissingCaseBranch i) (Just t)
+        (VConstr i args) -> case cs ^? ix i of
+            Just t ->
+                let nArgs = V.length args
+                in case stripNLambdas nArgs t of
+                    Just body ->
+                        let extended = foldl' (\ev arg -> Env.cons arg ev) env args
+                        in computeCek unbudgetedSteps ctx extended body
+                    -- TODO: wrong
+                    Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
             Nothing                -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
         _ -> throwingWithCause _MachineError NonTagScrutinized Nothing
 
@@ -811,6 +799,11 @@ enterComputeCek = computeCek (toWordArray 0) where
         if unbudgetedStepsTotal >= ?cekSlippage
         then spendAccumulatedBudget unbudgetedSteps' >> pure (toWordArray 0)
         else pure unbudgetedSteps'
+
+stripNLambdas :: Int -> Term name uni fun a -> Maybe (Term name uni fun a)
+stripNLambdas 0 t              = Just t
+stripNLambdas n (LamAbs _ _ b) = stripNLambdas (n-1) b
+stripNLambdas _ _              = Nothing
 
 -- See Note [Compilation peculiarities].
 -- | Evaluate a term using the CEK machine and keep track of costing, logging is optional.

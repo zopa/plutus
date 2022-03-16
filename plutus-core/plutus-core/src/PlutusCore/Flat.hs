@@ -19,7 +19,7 @@ module PlutusCore.Flat
     ) where
 
 import PlutusCore.Core
-import PlutusCore.Data
+import PlutusCore.Data (Data)
 import PlutusCore.DeBruijn
 import PlutusCore.Name
 
@@ -286,10 +286,8 @@ instance ( Closed uni
         IWrap    ann pat arg t -> encodeTerm 7 <> encode ann <> encode pat <> encode arg <> encode t
         Error    ann ty        -> encodeTerm 8 <> encode ann <> encode ty
         Builtin  ann bn        -> encodeTerm 9 <> encode ann <> encode bn
-        Prod     ann es        -> encodeTerm 10 <> encode ann <> encode es
-        Proj     ann i p       -> encodeTerm 11 <> encode ann <> encode i <> encode p
-        Tag      ann ty i t    -> encodeTerm 12 <> encode ann <> encode ty <> encode i <> encode t
-        Case     ann arg cs    -> encodeTerm 13 <> encode ann <> encode arg <> encode cs
+        Constr   ann ty i es   -> encodeTerm 10 <> encode ann <> encode ty <> encode i <> encode es
+        Case     ann ty arg cs -> encodeTerm 11 <> encode ann <> encode ty <> encode arg <> encode cs
 
     decode = go =<< decodeTerm
         where go 0  = Var      <$> decode <*> decode
@@ -302,10 +300,8 @@ instance ( Closed uni
               go 7  = IWrap    <$> decode <*> decode <*> decode <*> decode
               go 8  = Error    <$> decode <*> decode
               go 9  = Builtin  <$> decode <*> decode
-              go 10 = Prod    <$> decode <*> decode
-              go 11 = Proj    <$> decode <*> decode <*> decode
-              go 12 = Tag     <$> decode <*> decode <*> decode <*> decode
-              go 13 = Case    <$> decode <*> decode <*> decode
+              go 10 = Constr   <$> decode <*> decode <*> decode <*> decode
+              go 11 = Case     <$> decode <*> decode <*> decode <*> decode
               go _  = fail "Failed to decode Term TyName Name ()"
 
     size tm sz = termTagWidth + sz + case tm of
@@ -319,10 +315,8 @@ instance ( Closed uni
         IWrap    ann pat arg t -> getSize ann + getSize pat + getSize arg + getSize t
         Error    ann ty        -> getSize ann + getSize ty
         Builtin  ann bn        -> getSize ann + getSize bn
-        Prod     ann es        -> getSize ann + getSize es
-        Proj     ann i p       -> getSize ann + getSize i + getSize p
-        Tag      ann ty i p    -> getSize ann + getSize ty + getSize i + getSize p
-        Case     ann arg cs    -> getSize ann + getSize arg + getSize cs
+        Constr   ann ty i es   -> getSize ann + getSize ty + getSize i + getSize es
+        Case     ann ty arg cs -> getSize ann + getSize ty + getSize arg + getSize cs
 
 instance ( Closed uni
          , Flat fun

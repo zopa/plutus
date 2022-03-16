@@ -17,15 +17,7 @@
         MyExternalRecord
         [
           { [ MyExternalRecord_match ds ] (con integer) }
-          (lam
-            p
-            (prod (con integer))
-            (let
-              (nonrec)
-              (termbind (strict) (vardecl ds (con integer)) (proj 0 p))
-              ds
-            )
-          )
+          (lam ds (con integer) ds)
         ]
       )
     )

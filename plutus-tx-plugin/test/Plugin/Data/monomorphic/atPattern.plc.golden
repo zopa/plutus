@@ -34,11 +34,11 @@
             [ { { Tuple2_match (con integer) } (con integer) } t ] (con integer)
           }
           (lam
-            p
-            (prod (con integer) (con integer))
-            (let
-              (nonrec)
-              (termbind (strict) (vardecl ds (con integer)) (proj 1 p))
+            ds
+            (con integer)
+            (lam
+              ds
+              (con integer)
               [
                 [ addInteger ds ]
                 [
@@ -46,15 +46,7 @@
                     [ { { Tuple2_match (con integer) } (con integer) } wild ]
                     (con integer)
                   }
-                  (lam
-                    p
-                    (prod (con integer) (con integer))
-                    (let
-                      (nonrec)
-                      (termbind (strict) (vardecl a (con integer)) (proj 0 p))
-                      a
-                    )
-                  )
+                  (lam a (con integer) (lam ds (con integer) a))
                 ]
               ]
             )

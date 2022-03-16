@@ -85,9 +85,7 @@ deBruijnTermWithM h = go
        Apply ann t1 t2 -> Apply ann <$> go t1 <*> go t2
        Delay ann t -> Delay ann <$> go t
        Force ann t -> Force ann <$> go t
-       Prod ann es -> Prod ann <$> traverse go es
-       Proj ann i p -> Proj ann i <$> go p
-       Tag ann i p -> Tag ann i <$> go p
+       Constr ann i es -> Constr ann i <$> traverse go es
        Case ann arg cs -> Case ann <$> go arg <*> traverse go cs
        -- boring non-recursive cases
        Constant ann con -> pure $ Constant ann con
@@ -115,9 +113,7 @@ unDeBruijnTermWithM h = go
         Apply ann t1 t2 -> Apply ann <$> go t1 <*> go t2
         Delay ann t -> Delay ann <$> go t
         Force ann t -> Force ann <$> go t
-        Prod ann es -> Prod ann <$> traverse go es
-        Proj ann i p -> Proj ann i <$> go p
-        Tag ann i p -> Tag ann i <$> go p
+        Constr ann i es -> Constr ann i <$> traverse go es
         Case ann arg cs -> Case ann <$> go arg <*> traverse go cs
         -- boring non-recursive cases
         Constant ann con -> pure $ Constant ann con

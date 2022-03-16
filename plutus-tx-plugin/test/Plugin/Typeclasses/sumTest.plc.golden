@@ -62,19 +62,7 @@
           [ Monoid a ]
           [
             { [ { Monoid_match a } v ] [ (lam a (type) (fun a (fun a a))) a ] }
-            (lam
-              p
-              (prod [ (lam a (type) (fun a (fun a a))) a ] a)
-              (let
-                (nonrec)
-                (termbind
-                  (strict)
-                  (vardecl v [ (lam a (type) (fun a (fun a a))) a ])
-                  (proj 0 p)
-                )
-                v
-              )
-            )
+            (lam v [ (lam a (type) (fun a (fun a a))) a ] (lam v a v))
           ]
         )
       )
@@ -103,11 +91,7 @@
               [ Monoid a ]
               [
                 { [ { Monoid_match a } v ] a }
-                (lam
-                  p
-                  (prod [ (lam a (type) (fun a (fun a a))) a ] a)
-                  (let (nonrec) (termbind (strict) (vardecl v a) (proj 1 p)) v)
-                )
+                (lam v [ (lam a (type) (fun a (fun a a))) a ] (lam v a v))
               ]
             )
           )
@@ -150,35 +134,40 @@
                       (lam
                         ds
                         [ List a ]
-                        [
+                        {
                           [
-                            { [ { Nil_match a } ds ] m }
-                            (lam p (prod ) [ { mempty m } dMonoid ])
-                          ]
-                          (lam
-                            p
-                            (prod a [ List a ])
-                            (let
-                              (nonrec)
-                              (termbind (strict) (vardecl x a) (proj 0 p))
-                              (termbind
-                                (strict) (vardecl xs [ List a ]) (proj 1 p)
-                              )
-                              [
-                                [ dSemigroup [ ds x ] ]
-                                [
+                            [
+                              { [ { Nil_match a } ds ] (all dead (type) m) }
+                              (abs dead (type) [ { mempty m } dMonoid ])
+                            ]
+                            (lam
+                              x
+                              a
+                              (lam
+                                xs
+                                [ List a ]
+                                (abs
+                                  dead
+                                  (type)
                                   [
+                                    [ dSemigroup [ ds x ] ]
                                     [
-                                      { { fFoldableNil_cfoldMap m } a } dMonoid
+                                      [
+                                        [
+                                          { { fFoldableNil_cfoldMap m } a }
+                                          dMonoid
+                                        ]
+                                        ds
+                                      ]
+                                      xs
                                     ]
-                                    ds
                                   ]
-                                  xs
-                                ]
-                              ]
+                                )
+                              )
                             )
-                          )
-                        ]
+                          ]
+                          (all dead (type) dead)
+                        }
                       )
                     )
                   )
@@ -256,19 +245,7 @@
                       [ { AdditiveMonoid_match a } v ]
                       [ (lam a (type) (fun a (fun a a))) a ]
                     }
-                    (lam
-                      p
-                      (prod [ (lam a (type) (fun a (fun a a))) a ] a)
-                      (let
-                        (nonrec)
-                        (termbind
-                          (strict)
-                          (vardecl v [ (lam a (type) (fun a (fun a a))) a ])
-                          (proj 0 p)
-                        )
-                        v
-                      )
-                    )
+                    (lam v [ (lam a (type) (fun a (fun a a))) a ] (lam v a v))
                   ]
                 )
               )
@@ -284,13 +261,7 @@
                   [ AdditiveMonoid a ]
                   [
                     { [ { AdditiveMonoid_match a } v ] a }
-                    (lam
-                      p
-                      (prod [ (lam a (type) (fun a (fun a a))) a ] a)
-                      (let
-                        (nonrec) (termbind (strict) (vardecl v a) (proj 1 p)) v
-                      )
-                    )
+                    (lam v [ (lam a (type) (fun a (fun a a))) a ] (lam v a v))
                   ]
                 )
               )

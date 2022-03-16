@@ -60,8 +60,7 @@ data CkValue uni fun =
   | VLamAbs Name (Type TyName uni ()) (Term TyName Name uni fun ())
   | VIWrap (Type TyName uni ()) (Type TyName uni ()) (CkValue uni fun)
   | VBuiltin (Term TyName Name uni fun ()) (BuiltinRuntime (CkValue uni fun))
-  | VProd [CkValue uni fun]
-  | VTag (Type TyName uni ()) Int (CkValue uni fun)
+  | VConstr (Type TyName uni ()) Int [CkValue uni fun]
     deriving stock (Show)
 
 -- | Take pieces of a possibly partial builtin application and either create a 'CkValue' using
@@ -87,8 +86,7 @@ ckValueToTerm = \case
     VLamAbs name ty body -> LamAbs () name ty body
     VIWrap  ty1 ty2 val  -> IWrap  () ty1 ty2 $ ckValueToTerm val
     VBuiltin term _      -> term
-    VProd es             -> Prod () (fmap ckValueToTerm es)
-    VTag ty i t          -> Tag () ty i (ckValueToTerm t)
+    VConstr ty i es      -> Constr () ty i (fmap ckValueToTerm es)
 
 data CkEnv uni fun s = CkEnv
     { ckEnvRuntime    :: BuiltinsRuntime fun (CkValue uni fun)
@@ -137,16 +135,16 @@ instance HasConstant (CkValue uni fun) where
 
     fromConstant = VCon
 
+-- CK not CEK
+-- substitution not environments
 data Frame uni fun
     = FrameApplyFun (CkValue uni fun)                       -- ^ @[V _]@
     | FrameApplyArg (Term TyName Name uni fun ())           -- ^ @[_ N]@
     | FrameTyInstArg (Type TyName uni ())                   -- ^ @{_ A}@
     | FrameUnwrap                                           -- ^ @(unwrap _)@
     | FrameIWrap (Type TyName uni ()) (Type TyName uni ())  -- ^ @(iwrap A B _)@
-    | FrameProd [Term TyName Name uni fun ()] [CkValue uni fun]
-    | FrameProj Int
-    | FrameTag (Type TyName uni ()) Int
-    | FrameCase [Term TyName Name uni fun ()] [CkValue uni fun]
+    | FrameConstr (Type TyName uni ()) Int [Term TyName Name uni fun ()] [CkValue uni fun]
+    | FrameCase [Term TyName Name uni fun ()]
 
 type Context uni fun = [Frame uni fun]
 
@@ -178,10 +176,8 @@ substituteDb varFor new = go where
          TyInst   () fun arg      -> TyInst   () (go fun) arg
          Unwrap   () term         -> Unwrap   () (go term)
          IWrap    () pat arg term -> IWrap    () pat arg (go term)
-         Prod     () es           -> Prod     () (fmap go es)
-         Proj     () i p          -> Proj     () i (go p)
-         Tag      () ty i p       -> Tag      () ty i (go p)
-         Case     () arg cs       -> Case     () (go arg) (fmap go cs)
+         Constr   () ty i es      -> Constr   () ty i (fmap go es)
+         Case     () ty arg cs    -> Case     () ty (go arg) (fmap go cs)
          b@Builtin{}              -> b
          e@Error  {}              -> e
     goUnder var term = if var == varFor then term else go term
@@ -203,10 +199,8 @@ substTyInTerm tn0 ty0 = go where
          Unwrap  () term         -> Unwrap  () (go term)
          IWrap   () pat arg term -> IWrap   () (goTy pat) (goTy arg) (go term)
          Error   () ty           -> Error   () (goTy ty)
-         Prod    () es           -> Prod    () (fmap go es)
-         Proj    () i p          -> Proj    () i (go p)
-         Tag     () ty i p       -> Tag     () (goTy ty) i (go p)
-         Case    () arg cs       -> Case    () (go arg) (fmap go cs)
+         Constr  () ty i es      -> Constr  () (goTy ty) i (fmap go es)
+         Case    () ty arg cs    -> Case    () (goTy ty) (go arg) (fmap go cs)
     goUnder tn term = if tn == tn0 then term else go term
     goTy = substTyInTy tn0 ty0
 
@@ -253,17 +247,14 @@ stack |> Builtin _ bn            = do
     runtime <- asksM $ lookupBuiltin bn . ckEnvRuntime
     stack <| VBuiltin (Builtin () bn) runtime
 stack |> Constant _ val          = stack <| VCon val
-stack |> Prod _ es               = case es of
-    []     -> stack <| VProd []
-    t : ts -> FrameProd ts [] : stack |> t
-stack |> Proj _ i p              = FrameProj i : stack |> p
-stack |> Tag _ ty i p            = FrameTag ty i : stack |> p
-stack |> Case _ arg cs           = FrameCase cs [] : stack |> arg
+stack |> Constr _ ty i es               = case es of
+    []     -> stack <| VConstr ty i []
+    t : ts -> FrameConstr ty i ts [] : stack |> t
+stack |> Case _ _ arg cs         = FrameCase cs : stack |> arg
 _     |> Error{}                 =
     throwingWithCause _EvaluationError (UserEvaluationError CkEvaluationFailure) Nothing
 _     |> var@Var{}               =
     throwingWithCause _MachineError OpenTermEvaluatedMachineError $ Just var
-
 
 -- FIXME: make sure that the specification is up to date and that this matches.
 -- | The returning part of the CK machine. Rules are as follows:
@@ -288,27 +279,30 @@ FrameUnwrap        : stack <| wrapped = case wrapped of
     VIWrap _ _ term -> stack <| term
     _               ->
         throwingWithCause _MachineError NonWrapUnwrappedMachineError $ Just $ ckValueToTerm wrapped
-FrameProd todo done : stack <| e =
+FrameConstr ty i todo done : stack <| e =
     let done' = e:done
     in case todo of
-        t : ts -> FrameProd ts done' : stack |> t
-        []     -> stack <| VProd (reverse done')
-FrameProj i : stack <| prod = case prod of
-    VProd p -> case p !? i of
-        Just e  -> stack <| e
-        Nothing -> throwingWithCause _MachineError (ProductIndexOutOfBoundsMachineError i) $ Nothing
-    _ -> throwingWithCause _MachineError NonProductIndexedMachineError $ Nothing
-FrameTag ty i : stack <| e = stack <| VTag ty i e
-FrameCase todo done : stack <| e =
-    let done' = e:done
-    in case todo of
-        t : ts -> FrameCase ts done' : stack |> t
-        []     -> let final = reverse done' in case final ^? ix 0 of
-                Just (VTag _ i arg) -> case final ^? ix (i+1) of
-                    Just fun -> applyEvaluate stack fun arg
-                    Nothing  -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
-                Just _ -> throwingWithCause _MachineError NonTagScrutinized Nothing
-                Nothing -> throwingWithCause _MachineError MissingCaseScrutinee Nothing
+        t : ts -> FrameConstr ty i ts done' : stack |> t
+        []     -> stack <| VConstr ty i (reverse done')
+FrameCase cs : stack <| e = case e of
+    VConstr _ i args -> case cs !? i of
+        Just t ->
+            let (vds, body) = splitNAryLambda t
+            in case zipExact vds args of
+                Just ps ->
+                    let substed = foldl' (\term (vd, arg) -> substituteVarDecl term vd arg) body ps
+                    in stack |> substed
+                -- TODO: proper error
+                Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
+        Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
+    _ -> throwingWithCause _MachineError NonTagScrutinized Nothing
+
+substituteVarDecl :: Term TyName Name uni fun () -> VarDecl TyName Name uni fun () -> CkValue uni fun -> Term TyName Name uni fun ()
+substituteVarDecl term (VarDecl _ name _) arg = substituteDb name (ckValueToTerm arg) term
+
+splitNAryLambda :: Term TyName Name uni fun a -> ([VarDecl TyName Name uni fun a], Term TyName Name uni fun a)
+splitNAryLambda (LamAbs a n ty b) = let (vds, b') = splitNAryLambda b in (VarDecl a n ty:vds, b')
+splitNAryLambda b                 = ([], b)
 
 -- | Instantiate a term with a type and proceed.
 -- In case of 'TyAbs' just ignore the type. Otherwise check if the term is builtin application

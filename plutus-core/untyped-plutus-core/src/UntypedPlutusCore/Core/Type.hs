@@ -78,9 +78,7 @@ data Term name uni fun ann
     -- This is the cutoff at which constructors won't get pointer tags
     -- See Note [Term constructor ordering and numbers]
     | Error !ann
-    | Prod !ann ![Term name uni fun ann]
-    | Proj !ann Int !(Term name uni fun ann)
-    | Tag !ann !Int !(Term name uni fun ann)
+    | Constr !ann Int ![Term name uni fun ann]
     | Case !ann !(Term name uni fun ann) ![Term name uni fun ann]
     deriving stock (Show, Functor, Generic)
     deriving anyclass (NFData)
@@ -108,10 +106,8 @@ instance TermLike (Term name uni fun) TPLC.TyName name uni fun where
     unwrap   = const id
     iWrap    = \_ _ _ -> id
     error    = \ann _ -> Error ann
-    prod     = Prod
-    proj     = Proj
-    tag      = \ann _ i term -> Tag ann i term
-    kase     = Case
+    constr   = \ann _ i es -> Constr ann i es
+    kase     = \ann _ arg cs -> Case ann arg cs
 
 instance TPLC.HasConstant (Term name uni fun ()) where
     asConstant _        (Constant _ val) = pure val
@@ -139,9 +135,7 @@ termAnn (Apply ann _ _)  = ann
 termAnn (Delay ann _)    = ann
 termAnn (Force ann _)    = ann
 termAnn (Error ann)      = ann
-termAnn (Prod ann _)     = ann
-termAnn (Proj ann _ _)   = ann
-termAnn (Tag ann _ _)    = ann
+termAnn (Constr ann _ _) = ann
 termAnn (Case ann _ _)   = ann
 
 bindFunM
@@ -158,9 +152,7 @@ bindFunM f = go where
     go (Delay ann term)       = Delay ann <$> go term
     go (Force ann term)       = Force ann <$> go term
     go (Error ann)            = pure $ Error ann
-    go (Prod ann args)        = Prod ann <$> traverse go args
-    go (Proj ann i term)      = Proj ann i <$> go term
-    go (Tag ann i term)       = Tag ann i <$> go term
+    go (Constr ann i args)    = Constr ann i <$> traverse go args
     go (Case ann arg cs)      = Case ann <$> go arg <*> traverse go cs
 
 bindFun
@@ -184,10 +176,8 @@ erase (TPLC.TyInst ann term _)      = Force ann (erase term)
 erase (TPLC.Unwrap _ term)          = erase term
 erase (TPLC.IWrap _ _ _ term)       = erase term
 erase (TPLC.Error ann _)            = Error ann
-erase (TPLC.Prod ann args)          = Prod ann (fmap erase args)
-erase (TPLC.Proj ann i term)        = Proj ann i (erase term)
-erase (TPLC.Tag ann _ i term)       = Tag ann i (erase term)
-erase (TPLC.Case ann term cs)       = Case ann (erase term) (fmap erase cs)
+erase (TPLC.Constr ann _ i args)    = Constr ann i (fmap erase args)
+erase (TPLC.Case ann _ term cs)     = Case ann (erase term) (fmap erase cs)
 
 -- | Erase a Typed Plutus Core Program to its untyped counterpart.
 eraseProgram :: TPLC.Program tyname name uni fun ann -> Program name uni fun ann

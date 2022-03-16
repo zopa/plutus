@@ -418,16 +418,14 @@ costIsAcceptable = \case
   LamAbs{}   -> True
   TyAbs{}    -> True
 
-  -- Inlining products of size 1 or 0 seems okay, but does result in doing
+  -- Inlining constructors of size 1 or 0 seems okay, but does result in doing
   -- the work for the elements at each use site.
-  Prod _ es  -> case es of
+  Constr _ _ _ es  -> case es of
       []  -> True
       [e] -> costIsAcceptable e
       _   -> False
   -- Inlining tags and projections is acceptable, but does result in doing the work for the
   -- body at each use site.
-  Tag _ _ _ e -> costIsAcceptable e
-  Proj _ _ e -> costIsAcceptable e
   Case{} -> False
 
   -- Arguably we could allow these two, but they're uncommon anyway
@@ -448,14 +446,11 @@ sizeIsAcceptable = \case
   LamAbs _ _ _ t -> sizeIsAcceptable t
   TyAbs _ _ _ t  -> sizeIsAcceptable t
 
-  -- Inlining products of size 1 or 0 seems okay
-  Prod _ es  -> case es of
+  -- Inlining constructors of size 1 or 0 seems okay
+  Constr _ _ _ es  -> case es of
       []  -> True
       [e] -> sizeIsAcceptable e
       _   -> False
-  -- Inlining tags and projections is acceptable
-  Tag _ _ _ e -> sizeIsAcceptable e
-  Proj _ _ e -> costIsAcceptable e
   Case{} -> False
 
   -- Arguably we could allow these two, but they're uncommon anyway

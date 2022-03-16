@@ -14,8 +14,8 @@
         [{match_List (all a (type) (fun a a))} {Nil (all a (type) (fun a a))}]
         (all a (type) (fun a a))
       }
-      (lam dead (prod ) (abs a (type) (lam x a x)))
+      (abs a (type) (lam x a x))
     ]
-    (lam p (prod (all a (type) (fun a a)) [List (all a (type) (fun a a))]) (proj 0 p))
+    (lam h (all a (type) (fun a a)) (lam t [List (all a (type) (fun a a))] h))
   ]
 )

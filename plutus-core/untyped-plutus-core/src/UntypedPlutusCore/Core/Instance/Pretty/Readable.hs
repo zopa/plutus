@@ -43,9 +43,7 @@ instance
             sequenceDocM ToTheRight juxtFixity $ \prettyEl ->
                 "force" <+> prettyEl term
         Error _ -> unitDocM "error"
-        Prod _ es -> unitDocM "prod"
-        Proj _ i p -> unitDocM "proj"
-        Tag{} -> unitDocM "tag"
+        Constr{} -> unitDocM "constr"
         Case{} -> unitDocM "case"
 
 instance PrettyReadableBy configName (Term name uni fun a) =>

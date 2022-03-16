@@ -45,19 +45,7 @@
           [ Monoid a ]
           [
             { [ { Monoid_match a } v ] [ (lam a (type) (fun a (fun a a))) a ] }
-            (lam
-              p
-              (prod [ (lam a (type) (fun a (fun a a))) a ] a)
-              (let
-                (nonrec)
-                (termbind
-                  (strict)
-                  (vardecl v [ (lam a (type) (fun a (fun a a))) a ])
-                  (proj 0 p)
-                )
-                v
-              )
-            )
+            (lam v [ (lam a (type) (fun a (fun a a))) a ] (lam v a v))
           ]
         )
       )
@@ -86,11 +74,7 @@
               [ Monoid a ]
               [
                 { [ { Monoid_match a } v ] a }
-                (lam
-                  p
-                  (prod [ (lam a (type) (fun a (fun a a))) a ] a)
-                  (let (nonrec) (termbind (strict) (vardecl v a) (proj 1 p)) v)
-                )
+                (lam v [ (lam a (type) (fun a (fun a a))) a ] (lam v a v))
               ]
             )
           )
@@ -133,35 +117,40 @@
                       (lam
                         ds
                         [ List a ]
-                        [
+                        {
                           [
-                            { [ { Nil_match a } ds ] m }
-                            (lam p (prod ) [ { mempty m } dMonoid ])
-                          ]
-                          (lam
-                            p
-                            (prod a [ List a ])
-                            (let
-                              (nonrec)
-                              (termbind (strict) (vardecl x a) (proj 0 p))
-                              (termbind
-                                (strict) (vardecl xs [ List a ]) (proj 1 p)
-                              )
-                              [
-                                [ dSemigroup [ ds x ] ]
-                                [
+                            [
+                              { [ { Nil_match a } ds ] (all dead (type) m) }
+                              (abs dead (type) [ { mempty m } dMonoid ])
+                            ]
+                            (lam
+                              x
+                              a
+                              (lam
+                                xs
+                                [ List a ]
+                                (abs
+                                  dead
+                                  (type)
                                   [
+                                    [ dSemigroup [ ds x ] ]
                                     [
-                                      { { fFoldableNil_cfoldMap m } a } dMonoid
+                                      [
+                                        [
+                                          { { fFoldableNil_cfoldMap m } a }
+                                          dMonoid
+                                        ]
+                                        ds
+                                      ]
+                                      xs
                                     ]
-                                    ds
                                   ]
-                                  xs
-                                ]
-                              ]
+                                )
+                              )
                             )
-                          )
-                        ]
+                          ]
+                          (all dead (type) dead)
+                        }
                       )
                     )
                   )
@@ -193,27 +182,33 @@
                     (lam
                       l
                       [ List a ]
-                      [
+                      {
                         [
-                          { [ { Nil_match a } l ] [ List b ] }
-                          (lam p (prod ) { Nil b })
-                        ]
-                        (lam
-                          p
-                          (prod a [ List a ])
-                          (let
-                            (nonrec)
-                            (termbind (strict) (vardecl x a) (proj 0 p))
-                            (termbind
-                              (strict) (vardecl xs [ List a ]) (proj 1 p)
+                          [
+                            {
+                              [ { Nil_match a } l ] (all dead (type) [ List b ])
+                            }
+                            (abs dead (type) { Nil b })
+                          ]
+                          (lam
+                            x
+                            a
+                            (lam
+                              xs
+                              [ List a ]
+                              (abs
+                                dead
+                                (type)
+                                [
+                                  [ { Cons b } [ f x ] ]
+                                  [ [ { { fFunctorNil_cfmap a } b } f ] xs ]
+                                ]
+                              )
                             )
-                            [
-                              [ { Cons b } [ f x ] ]
-                              [ [ { { fFunctorNil_cfmap a } b } f ] xs ]
-                            ]
                           )
-                        )
-                      ]
+                        ]
+                        (all dead (type) dead)
+                      }
                     )
                   )
                 )
@@ -309,59 +304,37 @@
                         ]
                       }
                       (lam
-                        p
-                        (prod
-                          [
-                            (lam
-                              f
-                              (fun (type) (type))
+                        v
+                        [
+                          (lam
+                            f
+                            (fun (type) (type))
+                            (all
+                              a
+                              (type)
                               (all
-                                a
-                                (type)
-                                (all
-                                  b (type) (fun (fun a b) (fun [ f a ] [ f b ]))
-                                )
+                                b (type) (fun (fun a b) (fun [ f a ] [ f b ]))
                               )
                             )
-                            f
-                          ]
-                          (all a (type) (fun a [ f a ]))
-                          (all
-                            a
-                            (type)
-                            (all
-                              b
-                              (type)
-                              (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
-                            )
                           )
-                        )
-                        (let
-                          (nonrec)
-                          (termbind
-                            (strict)
-                            (vardecl
-                              v
-                              [
-                                (lam
-                                  f
-                                  (fun (type) (type))
-                                  (all
-                                    a
-                                    (type)
-                                    (all
-                                      b
-                                      (type)
-                                      (fun (fun a b) (fun [ f a ] [ f b ]))
-                                    )
-                                  )
-                                )
-                                f
-                              ]
-                            )
-                            (proj 0 p)
-                          )
+                          f
+                        ]
+                        (lam
                           v
+                          (all a (type) (fun a [ f a ]))
+                          (lam
+                            v
+                            (all
+                              a
+                              (type)
+                              (all
+                                b
+                                (type)
+                                (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
+                              )
+                            )
+                            v
+                          )
                         )
                       )
                     ]
@@ -405,52 +378,37 @@
                         )
                       }
                       (lam
-                        p
-                        (prod
-                          [
-                            (lam
-                              f
-                              (fun (type) (type))
-                              (all
-                                a
-                                (type)
-                                (all
-                                  b (type) (fun (fun a b) (fun [ f a ] [ f b ]))
-                                )
-                              )
-                            )
+                        v
+                        [
+                          (lam
                             f
-                          ]
-                          (all a (type) (fun a [ f a ]))
-                          (all
-                            a
-                            (type)
+                            (fun (type) (type))
                             (all
-                              b
+                              a
                               (type)
-                              (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
-                            )
-                          )
-                        )
-                        (let
-                          (nonrec)
-                          (termbind
-                            (strict)
-                            (vardecl
-                              v
                               (all
-                                a
-                                (type)
-                                (all
-                                  b
-                                  (type)
-                                  (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
-                                )
+                                b (type) (fun (fun a b) (fun [ f a ] [ f b ]))
                               )
                             )
-                            (proj 2 p)
                           )
+                          f
+                        ]
+                        (lam
                           v
+                          (all a (type) (fun a [ f a ]))
+                          (lam
+                            v
+                            (all
+                              a
+                              (type)
+                              (all
+                                b
+                                (type)
+                                (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
+                              )
+                            )
+                            v
+                          )
                         )
                       )
                     ]
@@ -479,41 +437,37 @@
                         (all a (type) (fun a [ f a ]))
                       }
                       (lam
-                        p
-                        (prod
-                          [
-                            (lam
-                              f
-                              (fun (type) (type))
+                        v
+                        [
+                          (lam
+                            f
+                            (fun (type) (type))
+                            (all
+                              a
+                              (type)
                               (all
-                                a
-                                (type)
-                                (all
-                                  b (type) (fun (fun a b) (fun [ f a ] [ f b ]))
-                                )
+                                b (type) (fun (fun a b) (fun [ f a ] [ f b ]))
                               )
                             )
-                            f
-                          ]
-                          (all a (type) (fun a [ f a ]))
-                          (all
-                            a
-                            (type)
-                            (all
-                              b
-                              (type)
-                              (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
-                            )
                           )
-                        )
-                        (let
-                          (nonrec)
-                          (termbind
-                            (strict)
-                            (vardecl v (all a (type) (fun a [ f a ])))
-                            (proj 1 p)
-                          )
+                          f
+                        ]
+                        (lam
                           v
+                          (all a (type) (fun a [ f a ]))
+                          (lam
+                            v
+                            (all
+                              a
+                              (type)
+                              (all
+                                b
+                                (type)
+                                (fun [ f (fun a b) ] (fun [ f a ] [ f b ]))
+                              )
+                            )
+                            v
+                          )
                         )
                       )
                     ]
@@ -563,75 +517,85 @@
                             (lam
                               ds
                               [ List a ]
-                              [
+                              {
                                 [
-                                  { [ { Nil_match a } ds ] [ f [ List b ] ] }
-                                  (lam
-                                    p
-                                    (prod )
-                                    [
-                                      { [ { pure f } dApplicative ] [ List b ] }
-                                      { Nil b }
-                                    ]
-                                  )
-                                ]
-                                (lam
-                                  p
-                                  (prod a [ List a ])
-                                  (let
-                                    (nonrec)
-                                    (termbind (strict) (vardecl x a) (proj 0 p))
-                                    (termbind
-                                      (strict)
-                                      (vardecl xs [ List a ])
-                                      (proj 1 p)
-                                    )
-                                    [
+                                  [
+                                    {
+                                      [ { Nil_match a } ds ]
+                                      (all dead (type) [ f [ List b ] ])
+                                    }
+                                    (abs
+                                      dead
+                                      (type)
                                       [
                                         {
-                                          {
-                                            [ { bad_name f } dApplicative ]
-                                            [ List b ]
-                                          }
-                                          [ List b ]
+                                          [ { pure f } dApplicative ] [ List b ]
                                         }
+                                        { Nil b }
+                                      ]
+                                    )
+                                  ]
+                                  (lam
+                                    x
+                                    a
+                                    (lam
+                                      xs
+                                      [ List a ]
+                                      (abs
+                                        dead
+                                        (type)
                                         [
                                           [
                                             {
                                               {
-                                                [
-                                                  { p1Applicative f }
-                                                  dApplicative
-                                                ]
-                                                b
+                                                [ { bad_name f } dApplicative ]
+                                                [ List b ]
                                               }
-                                              (fun [ List b ] [ List b ])
+                                              [ List b ]
                                             }
-                                            { Cons b }
+                                            [
+                                              [
+                                                {
+                                                  {
+                                                    [
+                                                      { p1Applicative f }
+                                                      dApplicative
+                                                    ]
+                                                    b
+                                                  }
+                                                  (fun [ List b ] [ List b ])
+                                                }
+                                                { Cons b }
+                                              ]
+                                              [ ds x ]
+                                            ]
                                           ]
-                                          [ ds x ]
-                                        ]
-                                      ]
-                                      [
-                                        [
                                           [
-                                            {
-                                              {
-                                                { fTraversableNil_ctraverse f }
-                                                a
-                                              }
-                                              b
-                                            }
-                                            dApplicative
+                                            [
+                                              [
+                                                {
+                                                  {
+                                                    {
+                                                      fTraversableNil_ctraverse
+                                                      f
+                                                    }
+                                                    a
+                                                  }
+                                                  b
+                                                }
+                                                dApplicative
+                                              ]
+                                              ds
+                                            ]
+                                            xs
                                           ]
-                                          ds
                                         ]
-                                        xs
-                                      ]
-                                    ]
+                                      )
+                                    )
                                   )
-                                )
-                              ]
+                                ]
+                                (all dead (type) dead)
+                              }
                             )
                           )
                         )
@@ -905,24 +869,25 @@
                             )
                           }
                           (lam
-                            p
-                            (prod
-                              [
-                                (lam
-                                  f
-                                  (fun (type) (type))
+                            v
+                            [
+                              (lam
+                                f
+                                (fun (type) (type))
+                                (all
+                                  a
+                                  (type)
                                   (all
-                                    a
+                                    b
                                     (type)
-                                    (all
-                                      b
-                                      (type)
-                                      (fun (fun a b) (fun [ f a ] [ f b ]))
-                                    )
+                                    (fun (fun a b) (fun [ f a ] [ f b ]))
                                   )
                                 )
-                                t
-                              ]
+                              )
+                              t
+                            ]
+                            (lam
+                              v
                               [
                                 (lam
                                   t
@@ -942,55 +907,29 @@
                                 )
                                 t
                               ]
-                              (all
-                                f
-                                (fun (type) (type))
+                              (lam
+                                v
                                 (all
-                                  a
-                                  (type)
+                                  f
+                                  (fun (type) (type))
                                   (all
-                                    b
+                                    a
                                     (type)
-                                    (fun
-                                      [ Applicative f ]
-                                      (fun
-                                        (fun a [ f b ])
-                                        (fun [ t a ] [ f [ t b ] ])
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                            (let
-                              (nonrec)
-                              (termbind
-                                (strict)
-                                (vardecl
-                                  v
-                                  (all
-                                    f
-                                    (fun (type) (type))
                                     (all
-                                      a
+                                      b
                                       (type)
-                                      (all
-                                        b
-                                        (type)
+                                      (fun
+                                        [ Applicative f ]
                                         (fun
-                                          [ Applicative f ]
-                                          (fun
-                                            (fun a [ f b ])
-                                            (fun [ t a ] [ f [ t b ] ])
-                                          )
+                                          (fun a [ f b ])
+                                          (fun [ t a ] [ f [ t b ] ])
                                         )
                                       )
                                     )
                                   )
                                 )
-                                (proj 2 p)
+                                v
                               )
-                              v
                             )
                           )
                         ]

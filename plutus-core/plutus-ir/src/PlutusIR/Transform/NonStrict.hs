@@ -80,12 +80,12 @@ strictifyBindingWithUnit = \case
 
         argName <- liftQuote $ freshName "arg"
         -- We use an empty product as our unit here
-        let unit = TyProd ann []
-            unitval = Prod ann []
+        let unitTy = TySum ann [TyProd ann []]
+            unitval = Constr ann unitTy 0 []
             forced = Apply ann (Var ann name) unitval
 
         -- See Note [Compiling non-strict bindings]
         modify $ Map.insert name forced
 
-        pure $ TermBind x Strict (VarDecl x' name (TyFun ann unit ty)) (LamAbs ann argName unit rhs)
+        pure $ TermBind x Strict (VarDecl x' name (TyFun ann unitTy ty)) (LamAbs ann argName unitTy rhs)
     x -> pure x

@@ -36,6 +36,7 @@ import Data.Text qualified as T
 import Data.Traversable
 
 import Data.List.NonEmpty qualified as NE
+import Data.String (fromString)
 
 {- NOTE [Normalization of data-constructors' types]
 
@@ -65,7 +66,10 @@ replaceFunTyTarget newTarget t = case t of
 -- | Given the type of a constructor, get the type of the "case" type with the given result type.
 -- @constructorCaseType R (A->Maybe A) = ((prod [A]) -> R)@
 constructorCaseType :: a -> Type tyname uni a -> VarDecl tyname name uni fun a -> Type tyname uni a
-constructorCaseType ann resultType vd = TyFun ann (constructorArgsType ann vd) resultType
+constructorCaseType ann resultType vd = PLC.mkIterTyFun ann (constructorCaseArgTypes vd) resultType
+
+constructorCaseArgTypes :: VarDecl tyname name uni fun a -> [Type tyname uni a]
+constructorCaseArgTypes vd = funTyArgs (_varDeclType vd)
 
 constructorArgsType :: a -> VarDecl tyname name uni fun a -> Type tyname uni a
 constructorArgsType ann vd =
@@ -362,14 +366,30 @@ mkConstructor dty d@(Datatype ann _ tvs _ constrs) index = do
             -- See Note [Recursive datatypes]
             -- wrap
             wrap ann dty (fmap (PIR.mkTyVar ann) tvs) $
-            Tag ann unrolled index (Prod ann (fmap (PIR.mkVar ann) argsAndTypes))
+            Constr ann unrolled index (fmap (PIR.mkVar ann) argsAndTypes)
     pure $ fmap (\a -> DatatypeComponent Constructor a) constr
 
-etaExpand :: MonadQuote m => a -> Term TyName Name uni fun a -> Type TyName uni a -> m (Term TyName Name uni fun a)
-etaExpand ann t (TyFun _ dom _) = do
-    e <- freshName "e"
-    pure $ LamAbs ann e dom $ Apply ann t (Var ann e)
-etaExpand _ _ _ = error "can't eta expand a non-function"
+-- TODO: test this independently!
+-- | Eta-expand a term for 'arity' arguments, given the term and the type of the term.
+etaExpand :: MonadQuote m => a -> Int -> Term TyName Name uni fun a -> Type TyName uni a -> m (Term TyName Name uni fun a)
+etaExpand ann arity term termTy = do
+    apps <- computeApps [] arity termTy
+    pure $ makeApps [] term (reverse apps)
+  where
+      computeApps acc 0 _ = pure acc
+      computeApps acc i (TyFun _ dom cod) = do
+        e <- freshName $ "arg" <> (fromString $ show i)
+        let vd = PLC.VarDecl ann e dom
+            rhs = Var ann e
+            def = PLC.Def vd rhs
+        computeApps (def:acc) (i-1) cod
+      computeApps _ _ _ = error "can't eta expand a non-function"
+
+      makeApps vds acc (PLC.Def vd rhs:rest) = makeApps (vd:vds) (Apply ann acc rhs) rest
+      makeApps vds acc []                    = makeLams vds acc
+
+      makeLams ((PLC.VarDecl a n ty):vds) acc = makeLams vds (LamAbs a n ty acc)
+      makeLams [] acc                         = acc
 
 -- Destructors
 
@@ -388,20 +408,21 @@ mkDestructor dty d@(Datatype ann _ tvs _ constrs) = do
     -- dty t_1 .. t_n
     let appliedReal = PIR.mkIterTyApp ann (getType dty) (fmap (PIR.mkTyVar ann) tvs)
 
-    -- case arguments and their types
-    casesAndTypes <- do
-          -- these types appear *outside* the scope of the abstraction for the datatype, so we need to use the concrete datatype here
-          -- see note [Abstract data types]
-          -- FIXME: normalize datacons' types also here
-          let caseTypes = unveilDatatype (getType dty) d <$> fmap (constructorCaseType ann (TyVar ann resultType)) constrs
-          caseArgNames <- for constrs (\c -> safeFreshName $ "case_" <> T.pack (varDeclNameString c))
-          pure $ zipWith (VarDecl ann) caseArgNames caseTypes
+    -- Variables for case arguments, and the bodies to be used as the actual cases
+    caseVarsAndBodies <- for constrs $ \c -> do
+        -- these types appear *outside* the scope of the abstraction for the datatype, so we need to use the concrete datatype here
+        -- see note [Abstract data types]
+        -- FIXME: normalize datacons' types also here
+        let caseType = constructorCaseType ann (TyVar ann resultType) c
+            arity = length $ funTyArgs caseType
+            unveiledCaseType = unveilDatatype (getType dty) d caseType
+        caseArgName <- safeFreshName $ "case_" <> T.pack (varDeclNameString c)
+        let caseVar = VarDecl ann caseArgName unveiledCaseType
+        -- We're requiring case bodies to be lambdas, but at this point they're
+        -- unknown functions passed into the destructor. So we just eta-expand them.
+        caseBody <- etaExpand ann arity (PIR.mkVar ann caseVar) unveiledCaseType
 
-    -- We're requiring case bodies to be lambdas, but at this point they're
-    -- unknown functions passed into the destructor. So we just eta-expand them.
-    caseBodies <- for casesAndTypes $ \vd -> do
-        let e = PIR.mkVar ann vd
-        etaExpand ann e (_varDeclType vd)
+        pure (caseVar, caseBody)
 
     xn <- safeFreshName "x"
     let destr =
@@ -412,10 +433,10 @@ mkDestructor dty d@(Datatype ann _ tvs _ constrs) = do
             -- forall out
             TyAbs ann resultType (Type ann) $
             -- \case_1 .. case_j
-            PIR.mkIterLamAbs casesAndTypes $
+            PIR.mkIterLamAbs (fmap fst caseVarsAndBodies) $
             -- See note [Recursive datatypes]
             -- case (unwrap x) case_1 .. case_j
-            Case ann (unwrap ann dty $ Var ann xn) caseBodies
+            Case ann (TyVar ann resultType) (unwrap ann dty $ Var ann xn) (fmap snd caseVarsAndBodies)
     pure $ fmap (\a -> DatatypeComponent Destructor a) destr
 
 -- See note [Scott encoding of datatypes]

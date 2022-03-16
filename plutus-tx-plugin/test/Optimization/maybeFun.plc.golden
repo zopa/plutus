@@ -4,23 +4,31 @@
     ds_i0
     (lam
       ds_i0
-      (case
-        ds_i2
-        (lam
-          e_i0
-          (case
-            ds_i2
-            (lam
-              e_i0
-              [
-                (lam arg_0_i0 (tag 0 (prod arg_0_i1)))
-                [ [ (builtin addInteger) (proj 0 e_i2) ] (proj 0 e_i1) ]
-              ]
+      (force
+        (case
+          ds_i2
+          (lam
+            arg1_i0
+            (delay
+              (force
+                (case
+                  ds_i2
+                  (lam
+                    arg1_i0
+                    (delay
+                      [
+                        (lam arg_0_i0 (constr 0 arg_0_i1))
+                        [ [ (builtin addInteger) arg1_i2 ] arg1_i1 ]
+                      ]
+                    )
+                  )
+                  (delay (constr 1))
+                )
+              )
             )
-            (lam e_i0 (tag 1 (prod )))
           )
+          (delay (constr 1))
         )
-        (lam e_i0 (tag 1 (prod )))
       )
     )
   )

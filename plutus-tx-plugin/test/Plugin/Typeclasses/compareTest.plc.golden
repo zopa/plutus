@@ -45,47 +45,53 @@
         (lam
           y
           (con integer)
-          [
+          {
             [
-              {
-                [
-                  Bool_match
-                  [
-                    [ [ { ifThenElse Bool } [ [ equalsInteger x ] y ] ] True ]
-                    False
-                  ]
-                ]
-                Ordering
-              }
-              (lam p (prod ) EQ)
-            ]
-            (lam
-              p
-              (prod )
               [
-                [
-                  {
+                {
+                  [
+                    Bool_match
                     [
-                      Bool_match
-                      [
-                        [
-                          [
-                            { ifThenElse Bool }
-                            [ [ lessThanEqualsInteger x ] y ]
-                          ]
-                          True
-                        ]
-                        False
-                      ]
+                      [ [ { ifThenElse Bool } [ [ equalsInteger x ] y ] ] True ]
+                      False
                     ]
-                    Ordering
-                  }
-                  (lam p (prod ) LT)
-                ]
-                (lam p (prod ) GT)
+                  ]
+                  (all dead (type) Ordering)
+                }
+                (abs dead (type) EQ)
               ]
-            )
-          ]
+              (abs
+                dead
+                (type)
+                {
+                  [
+                    [
+                      {
+                        [
+                          Bool_match
+                          [
+                            [
+                              [
+                                { ifThenElse Bool }
+                                [ [ lessThanEqualsInteger x ] y ]
+                              ]
+                              True
+                            ]
+                            False
+                          ]
+                        ]
+                        (all dead (type) Ordering)
+                      }
+                      (abs dead (type) LT)
+                    ]
+                    (abs dead (type) GT)
+                  ]
+                  (all dead (type) dead)
+                }
+              )
+            ]
+            (all dead (type) dead)
+          }
         )
       )
     )
@@ -100,25 +106,30 @@
         (lam
           y
           (con integer)
-          [
+          {
             [
-              {
-                [
-                  Bool_match
+              [
+                {
                   [
+                    Bool_match
                     [
-                      [ { ifThenElse Bool } [ [ lessThanEqualsInteger x ] y ] ]
-                      True
+                      [
+                        [
+                          { ifThenElse Bool } [ [ lessThanEqualsInteger x ] y ]
+                        ]
+                        True
+                      ]
+                      False
                     ]
-                    False
                   ]
-                ]
-                (con integer)
-              }
-              (lam p (prod ) y)
+                  (all dead (type) (con integer))
+                }
+                (abs dead (type) y)
+              ]
+              (abs dead (type) x)
             ]
-            (lam p (prod ) x)
-          ]
+            (all dead (type) dead)
+          }
         )
       )
     )
@@ -133,25 +144,30 @@
         (lam
           y
           (con integer)
-          [
+          {
             [
-              {
-                [
-                  Bool_match
+              [
+                {
                   [
+                    Bool_match
                     [
-                      [ { ifThenElse Bool } [ [ lessThanEqualsInteger x ] y ] ]
-                      True
+                      [
+                        [
+                          { ifThenElse Bool } [ [ lessThanEqualsInteger x ] y ]
+                        ]
+                        True
+                      ]
+                      False
                     ]
-                    False
                   ]
-                ]
-                (con integer)
-              }
-              (lam p (prod ) x)
+                  (all dead (type) (con integer))
+                }
+                (abs dead (type) x)
+              ]
+              (abs dead (type) y)
             ]
-            (lam p (prod ) y)
-          ]
+            (all dead (type) dead)
+          }
         )
       )
     )
@@ -304,23 +320,28 @@
           [
             { [ { Ord_match a } v ] (fun a (fun a Ordering)) }
             (lam
-              p
-              (prod
-                [ (lam a (type) (fun a (fun a Bool))) a ]
-                (fun a (fun a Ordering))
-                (fun a (fun a Bool))
-                (fun a (fun a Bool))
-                (fun a (fun a Bool))
-                (fun a (fun a Bool))
-                (fun a (fun a a))
-                (fun a (fun a a))
-              )
-              (let
-                (nonrec)
-                (termbind
-                  (strict) (vardecl v (fun a (fun a Ordering))) (proj 1 p)
-                )
+              v
+              [ (lam a (type) (fun a (fun a Bool))) a ]
+              (lam
                 v
+                (fun a (fun a Ordering))
+                (lam
+                  v
+                  (fun a (fun a Bool))
+                  (lam
+                    v
+                    (fun a (fun a Bool))
+                    (lam
+                      v
+                      (fun a (fun a Bool))
+                      (lam
+                        v
+                        (fun a (fun a Bool))
+                        (lam v (fun a (fun a a)) (lam v (fun a (fun a a)) v))
+                      )
+                    )
+                  )
+                )
               )
             )
           ]
@@ -344,19 +365,22 @@
             (lam
               b
               a
-              [
+              {
                 [
                   [
-                    {
-                      [ Ordering_match [ [ [ { compare a } dOrd ] a ] b ] ]
-                      Ordering
-                    }
-                    (lam p (prod ) EQ)
+                    [
+                      {
+                        [ Ordering_match [ [ [ { compare a } dOrd ] a ] b ] ]
+                        (all dead (type) Ordering)
+                      }
+                      (abs dead (type) EQ)
+                    ]
+                    (abs dead (type) LT)
                   ]
-                  (lam p (prod ) LT)
+                  (abs dead (type) GT)
                 ]
-                (lam p (prod ) GT)
-              ]
+                (all dead (type) dead)
+              }
             )
           )
         )

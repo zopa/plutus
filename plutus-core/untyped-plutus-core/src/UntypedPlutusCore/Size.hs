@@ -21,9 +21,7 @@ termSize = \case
     Constant{}    -> 1
     Builtin{}     -> 1
     Force _ t     -> 1 + termSize t
-    Prod _ es     -> 1 + sum (fmap termSize es)
-    Proj _ _ p    -> 1 + termSize p
-    Tag _ _ p     -> 1 + termSize p
+    Constr _ _ es -> 1 + sum (fmap termSize es)
     Case _ arg cs -> 1 + termSize arg + sum (fmap termSize cs)
     Error _       -> 1
 

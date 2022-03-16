@@ -72,10 +72,8 @@ renameTermM (Unwrap ann term)          = Unwrap ann <$> renameTermM term
 renameTermM (Error ann ty)             = Error ann <$> renameTypeM ty
 renameTermM (TyInst ann term ty)       = TyInst ann <$> renameTermM term <*> renameTypeM ty
 renameTermM (Var ann name)             = Var ann <$> renameNameM name
-renameTermM (Prod ann es)              = Prod ann <$> traverse renameTermM es
-renameTermM (Proj ann i p)             = Proj ann i <$> renameTermM p
-renameTermM (Tag ann ty i p)           = Tag ann <$> renameTypeM ty <*> pure i <*> renameTermM p
-renameTermM (Case ann arg cs)          = Case ann <$> renameTermM arg <*> traverse renameTermM cs
+renameTermM (Constr ann ty i es)       = Constr ann <$> renameTypeM ty <*> pure i <*> traverse renameTermM es
+renameTermM (Case ann ty arg cs)       = Case ann <$> renameTypeM ty <*> renameTermM arg <*> traverse renameTermM cs
 renameTermM con@Constant{}             = pure con
 renameTermM bi@Builtin{}               = pure bi
 

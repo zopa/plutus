@@ -93,14 +93,10 @@ instance
                 [prettyBy config ty1, prettyBy config ty2, prettyBy config t])
         Unwrap ann t ->
             sexp "unwrap" (consAnnIf config ann [prettyBy config t])
-        Prod ann es ->
-            sexp "prod" (consAnnIf config ann (fmap (prettyBy config) es))
-        Proj ann i p ->
-            sexp "proj" (consAnnIf config ann [pretty i, prettyBy config p])
-        Tag ann ty i p ->
-            sexp "tag" (consAnnIf config ann [pretty i, prettyBy config ty, prettyBy config p])
-        Case ann arg cs ->
-            sexp "case" (consAnnIf config ann (prettyBy config arg : fmap (prettyBy config) cs))
+        Constr ann ty i es ->
+            sexp "constr" (consAnnIf config ann ([prettyBy config ty, pretty i ] ++ (fmap (prettyBy config) es)))
+        Case ann ty arg cs ->
+            sexp "case" (consAnnIf config ann ([prettyBy config arg, prettyBy config ty ] ++ (fmap (prettyBy config) cs)))
       where
         prettyTypeOf :: GShow t => Some (ValueOf t) -> Doc dann
         prettyTypeOf (Some (ValueOf uni _ )) = pretty $ SomeTypeIn uni

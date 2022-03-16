@@ -29,15 +29,7 @@
         RecordWithStrictField
         [
           { [ RecordWithStrictField_match ds ] RecordNewtype }
-          (lam
-            p
-            (prod MyMonoRecord (con integer))
-            (let
-              (nonrec)
-              (termbind (strict) (vardecl dt (con integer)) (proj 1 p))
-              [ RecordNewtype dt ]
-            )
-          )
+          (lam ds MyMonoRecord (lam dt (con integer) [ RecordNewtype dt ]))
         ]
       )
     )

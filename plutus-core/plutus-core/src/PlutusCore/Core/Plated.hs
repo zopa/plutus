@@ -137,9 +137,7 @@ termTyBinds f term0 = case term0 of
     Unwrap{}         -> pure term0
     Constant{}       -> pure term0
     Builtin{}        -> pure term0
-    Prod{}           -> pure term0
-    Proj{}           -> pure term0
-    Tag{}            -> pure term0
+    Constr{}         -> pure term0
     Case{}           -> pure term0
 
 -- | Get all the direct child 'name a's of the given 'Term' from 'LamAbs'es.
@@ -155,9 +153,7 @@ termBinds f term0 = case term0 of
     Unwrap{}          -> pure term0
     Constant{}        -> pure term0
     Builtin{}         -> pure term0
-    Prod{}            -> pure term0
-    Proj{}            -> pure term0
-    Tag{}             -> pure term0
+    Constr{}          -> pure term0
     Case{}            -> pure term0
 
 -- | Get all the direct child 'name a's of the given 'Term' from 'Var's.
@@ -173,9 +169,7 @@ termVars f term0 = case term0 of
     Unwrap{}   -> pure term0
     Constant{} -> pure term0
     Builtin{}  -> pure term0
-    Prod{}     -> pure term0
-    Proj{}     -> pure term0
-    Tag{}      -> pure term0
+    Constr{}   -> pure term0
     Case{}     -> pure term0
 
 -- | Get all the direct child 'Unique's of the given 'Term' (including the type-level ones).
@@ -191,9 +185,7 @@ termUniques f term0 = case term0 of
     Unwrap{}          -> pure term0
     Constant{}        -> pure term0
     Builtin{}         -> pure term0
-    Prod{}            -> pure term0
-    Proj{}            -> pure term0
-    Tag{}             -> pure term0
+    Constr{}          -> pure term0
     Case{}            -> pure term0
 
 {-# INLINE termSubkinds #-}
@@ -210,9 +202,7 @@ termSubkinds f term0 = case term0 of
     Unwrap{}        -> pure term0
     Constant{}      -> pure term0
     Builtin{}       -> pure term0
-    Prod{}          -> pure term0
-    Proj{}          -> pure term0
-    Tag{}           -> pure term0
+    Constr{}        -> pure term0
     Case{}          -> pure term0
 
 {-# INLINE termSubtypes #-}
@@ -223,16 +213,14 @@ termSubtypes f term0 = case term0 of
     TyInst ann t ty     -> TyInst ann t <$> f ty
     IWrap ann ty1 ty2 t -> IWrap ann <$> f ty1 <*> f ty2 <*> pure t
     Error ann ty        -> Error ann <$> f ty
-    Tag ann ty i p      -> Tag ann <$> f ty <*> pure i <*> pure p
+    Constr ann ty i es  -> Constr ann <$> f ty <*> pure i <*> pure es
+    Case ann ty arg cs  -> Case ann <$> f ty <*> pure arg <*> pure cs
     TyAbs{}             -> pure term0
     Apply{}             -> pure term0
     Unwrap{}            -> pure term0
     Var{}               -> pure term0
     Constant{}          -> pure term0
     Builtin{}           -> pure term0
-    Prod{}              -> pure term0
-    Proj{}              -> pure term0
-    Case{}              -> pure term0
 
 -- | Get all the transitive child 'Type's of the given 'Term'.
 termSubtypesDeep :: Fold (Term tyname name uni fun ann) (Type tyname uni ann)
@@ -248,10 +236,8 @@ termSubterms f term0 = case term0 of
     TyAbs ann n k t     -> TyAbs ann n k <$> f t
     Apply ann t1 t2     -> Apply ann <$> f t1 <*> f t2
     Unwrap ann t        -> Unwrap ann <$> f t
-    Prod ann es         -> Prod ann <$> traverse f es
-    Proj ann i p        -> Proj ann i <$> f p
-    Tag ann ty i p      -> Tag ann ty i <$> f p
-    Case ann arg cs     -> Case ann <$> f arg <*> traverse f cs
+    Constr ann ty i es  -> Constr ann ty i <$> traverse f es
+    Case ann ty arg cs  -> Case ann ty <$> f arg <*> traverse f cs
     Error{}             -> pure term0
     Var{}               -> pure term0
     Constant{}          -> pure term0

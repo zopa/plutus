@@ -90,9 +90,7 @@ instance
         Error _ ty             ->
             compoundDocM juxtFixity $ \prettyIn ->
                 "error" <+> braces (prettyIn ToTheRight botFixity ty)
-        Prod _ args             -> unitDocM "prod"
-        Proj _ i arg             -> unitDocM "proj"
-        Tag{} -> unitDocM "tag"
+        Constr{} -> unitDocM "constr"
         Case{} -> unitDocM "case"
 
 instance PrettyReadableBy configName (Term tyname name uni fun a) =>

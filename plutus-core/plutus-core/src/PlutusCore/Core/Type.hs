@@ -89,10 +89,23 @@ data Term tyname name uni fun ann
     | Unwrap ann (Term tyname name uni fun ann)
     | IWrap ann (Type tyname uni ann) (Type tyname uni ann) (Term tyname name uni fun ann)
     | Error ann (Type tyname uni ann)
-    | Prod ann [Term tyname name uni fun ann]
-    | Proj ann Int (Term tyname name uni fun ann)
-    | Tag ann (Type tyname uni ann) Int (Term tyname name uni fun ann)
-    | Case ann (Term tyname name uni fun ann) [Term tyname name uni fun ann]
+
+    -- X + Y + Z
+    -- (tag ty i t) -> (i, t)
+    -- (tag 1 t) -> t :: Y
+    -- X +Y, Z+Y, X+Y+P+Q
+    -- (case t c1..cn) -> case t of { (1, arg) -> c1 arg; ... }
+
+    -- X x Y x Z
+    -- (prod t1...tn) -> (x, y, z)
+    -- (proj i t) -> (x, y, z) ! 1 = y
+
+    -- (constr ty i t1..tn) :: ty
+    -- (case ty t c1..cn) :: ty
+    -- A -> B -> C, F -> C, G -> H -> C
+
+    | Constr ann (Type tyname uni ann) Int [Term tyname name uni fun ann]
+    | Case ann (Type tyname uni ann) (Term tyname name uni fun ann) [Term tyname name uni fun ann]
     deriving stock (Show, Functor, Generic)
     deriving anyclass (NFData)
 
@@ -213,10 +226,8 @@ termAnn (Unwrap ann _    ) = ann
 termAnn (IWrap ann _ _ _ ) = ann
 termAnn (Error ann _     ) = ann
 termAnn (LamAbs ann _ _ _) = ann
-termAnn (Prod ann _      ) = ann
-termAnn (Proj ann _ _    ) = ann
-termAnn (Tag ann _ _ _   ) = ann
-termAnn (Case ann _ _    ) = ann
+termAnn (Constr ann _ _ _) = ann
+termAnn (Case ann _ _ _  ) = ann
 
 -- | Map a function over the set of built-in functions.
 mapFun :: (fun -> fun') -> Term tyname name uni fun ann -> Term tyname name uni fun' ann
@@ -231,10 +242,8 @@ mapFun f = go where
     go (Var ann name)             = Var ann name
     go (Constant ann con)         = Constant ann con
     go (Builtin ann fun)          = Builtin ann (f fun)
-    go (Prod ann args)            = Prod ann (map go args)
-    go (Proj ann i arg)           = Proj ann i (go arg)
-    go (Tag ann ty i arg)         = Tag ann ty i (go arg)
-    go (Case ann arg cs)          = Case ann (go arg) (map go cs)
+    go (Constr ann ty i args)     = Constr ann ty i (map go args)
+    go (Case ann ty arg cs)       = Case ann ty (go arg) (map go cs)
 
 -- | This is a wrapper to mark the place where the binder is introduced (i.e. LamAbs/TyAbs)
 -- and not where it is actually used (TyVar/Var..).

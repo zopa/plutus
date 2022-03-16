@@ -11,7 +11,7 @@ module Evaluation.Builtins.Definition
     ( test_definition
     ) where
 
-import PlutusCore
+import PlutusCore hiding (Constr)
 import PlutusCore.Builtin
 import PlutusCore.Data
 import PlutusCore.Evaluation.Machine.MachineParameters

@@ -49,13 +49,8 @@ instance
         Force ann term ->
             sexp "force" (consAnnIf config ann
                 [prettyBy config term])
-        Prod ann es ->
-            sexp "prod" (consAnnIf config ann (fmap (prettyBy config) es))
-        Proj ann i p ->
-            sexp "proj" (consAnnIf config ann
-                [pretty i, prettyBy config p])
-        Tag ann i p ->
-            sexp "tag" (consAnnIf config ann [pretty i, prettyBy config p])
+        Constr ann i es ->
+            sexp "constr" (consAnnIf config ann (pretty i : fmap (prettyBy config) es))
         Case ann arg cs ->
             sexp "case" (consAnnIf config ann (prettyBy config arg : fmap (prettyBy config) cs))
       where

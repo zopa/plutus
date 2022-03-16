@@ -168,10 +168,8 @@ deBruijnTermWithM h = go
         Unwrap ann t -> Unwrap ann <$> go t
         IWrap ann pat arg t -> IWrap ann <$> goT pat <*> goT arg <*> go t
         Error ann ty -> Error ann <$> goT ty
-        Prod ann es -> Prod ann <$> traverse go es
-        Proj ann i p -> Proj ann i <$> go p
-        Tag ann ty i p -> Tag ann <$> goT ty <*> pure i <*> go p
-        Case ann arg cs -> Case ann <$> go arg <*> traverse go cs
+        Constr ann ty i es -> Constr ann <$> goT ty <*> pure i <*> traverse go es
+        Case ann ty arg cs -> Case ann <$> goT ty <*> go arg <*> traverse go cs
         -- boring non-recursive cases
         Constant ann con -> pure $ Constant ann con
         Builtin ann bn -> pure $ Builtin ann bn
@@ -240,10 +238,8 @@ unDeBruijnTermWithM h = go
         Unwrap ann t -> Unwrap ann <$> go t
         IWrap ann pat arg t -> IWrap ann <$> goT pat <*> goT arg <*> go t
         Error ann ty -> Error ann <$> goT ty
-        Prod ann es -> Prod ann <$> traverse go es
-        Proj ann i p -> Proj ann i <$> go p
-        Tag ann ty i p -> Tag ann <$> goT ty <*> pure i <*> go p
-        Case ann arg cs -> Case ann <$> go arg <*> traverse go cs
+        Constr ann ty i es -> Constr ann <$> goT ty <*> pure i <*> traverse go es
+        Case ann ty arg cs -> Case ann <$> goT ty <*> go arg <*> traverse go cs
         -- boring non-recursive cases
         Constant ann con -> pure $ Constant ann con
         Builtin ann bn -> pure $ Builtin ann bn

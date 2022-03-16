@@ -31,13 +31,16 @@
             (lam
               k
               (fun a [ Maybe b ])
-              [
+              {
                 [
-                  { [ { Maybe_match a } ds ] [ Maybe b ] }
-                  (lam p (prod a) [ k (proj 0 p) ])
+                  [
+                    { [ { Maybe_match a } ds ] (all dead (type) [ Maybe b ]) }
+                    (lam x a (abs dead (type) [ k x ]))
+                  ]
+                  (abs dead (type) { Nothing b })
                 ]
-                (lam p (prod ) { Nothing b })
-              ]
+                (all dead (type) dead)
+              }
             )
           )
         )
