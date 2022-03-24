@@ -163,6 +163,6 @@ benchSerialiseData2 =
 
 makeBenchmarks :: [Benchmark]
 makeBenchmarks =
-    [ -- benchEqualsData2,
+    [ benchEqualsData2,
       benchSerialiseData2
     ]
