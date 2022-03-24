@@ -150,7 +150,7 @@ benchEqualsData2 =
 
 benchSerialiseData2 :: Benchmark
 benchSerialiseData2 =
-    bgroup "SerilaiseData"
+    bgroup "SerialiseData"
                [ bgroup "listB"    [mkBMs listBsample]
                , bgroup "listI"    [mkBMs listIsample]
                , bgroup "listTree" [mkBMs listTreeSample]
@@ -163,6 +163,6 @@ benchSerialiseData2 =
 
 makeBenchmarks :: [Benchmark]
 makeBenchmarks =
-    [ benchEqualsData2
-    , benchSerialiseData2
+    [ -- benchEqualsData2,
+      benchSerialiseData2
     ]

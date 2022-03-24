@@ -7,11 +7,11 @@ import PlutusCore.Evaluation.Machine.ExMemory (ExMemoryUsage (..))
 
 import Control.Monad
 import Data.Bits
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, pack)
 import Data.Int (Int64)
 import Data.List (foldl')
 import Data.Text (Text)
-import Data.Word (Word64)
+import Data.Word (Word64, Word8)
 
 import Hedgehog qualified as H
 import Hedgehog.Internal.Gen qualified as G
@@ -123,11 +123,14 @@ genI :: Int -> Gen Data
 genI n = do
   I <$> genBigInteger n
 
+genBytes :: Int -> Gen [Word8]
+genBytes n = vectorOf n arbitrary
+
 {- | Generate an arbitrary bytestring of size n (words) -}
 genB :: Int -> Gen Data
 genB n = do
-  let size = 4*n
-  B <$> resize size arbitrary
+  let size = 8*n
+  (B . pack) <$> genBytes size
 
 {- | Generate an arbitrary Data object of depth at most n containing btyrestrings
    with memory usage bmem and integers with memory usage imem.  The `memUsage`
@@ -216,10 +219,9 @@ genListTree n =
     then
         pure $ I 0
     else
-         List <$> listOf' (genListTree (n `div` 2))
-    where listOf' g = frequency [ (800, resize   10 (listOf g))
-                                , (200, resize  100 (listOf g))
-                                , (2,   resize 1000 (listOf g))
+         List <$> listOf' (genListTree (n `div` 5))
+    where listOf' g = frequency [ (800, resize 10 (listOf g))
+                                , (200, resize 40 (listOf g))
                                 ]
 
 genMapTree :: Int -> Gen Data
@@ -228,31 +230,34 @@ genMapTree n =
     then
         pure $ I 0
     else
-        Map  <$> (listOf' $ (,) <$> genMapTree (n `div` 2) <*> genMapTree (n `div` 2))
-            where listOf' g = frequency [ (800, resize   10 (listOf g))
-                                        , (200, resize  100 (listOf g))
-                                        , (2,   resize 1000 (listOf g))
-                                        ]
+        Map  <$> (listOf' $ (,) <$> genMapTree (n `div` 8) <*> genMapTree (n `div` 8))
+    where listOf' g = frequency [ (800, resize  10 (listOf g))
+                                , (200, resize  40 (listOf g))
+                                ]
 nSamples :: Int
 nSamples = 30
 
+-- A Data object with a single node consisting of a List of Bytestrings.  memoryUsage up to about 50000
 listBsample :: [Data]
 listBsample =
     unsafePerformIO $ concat <$> mapM genK [(10,10), (50, 10), (100, 10), (10,100), (50, 100), (100, 100), (10, 1000), (50, 1000)]
         where genK (len, sz) = replicateM nSamples . generate $ genListB len sz
 
+-- A Data object with a single node consisting of a List of Integers.  memoryUsage up to about 50000
 listIsample :: [Data]
 listIsample =
     unsafePerformIO $ concat <$> mapM genK [(10,10), (50, 10), (100, 10), (10,100), (50, 100), (100, 100), (10, 1000), (50, 1000)]
         where genK (len, sz) = replicateM nSamples . generate $ genListI len sz
 
+-- A Data object consisting of a tree of List nodes with 0 at the leaves. memoryUsage up to about
 listTreeSample :: [Data]
 listTreeSample =
-    unsafePerformIO $ concat <$> mapM genK [10, 50, 100, 250, 500, 1000, 2000, 4000]
+    unsafePerformIO $ concat <$> mapM genK [10, 80, 120, 180, 200, 280, 300, 350]
         where genK sz = replicateM nSamples . generate $ genListTree sz
 
+-- A Data object consisting of a tree of Map nodes with 0 at the leaves. memoryUsage up to about
 mapTreeSample :: [Data]
 mapTreeSample =
-    unsafePerformIO $ concat <$> mapM genK [10, 50, 100, 250, 500, 1000, 2000, 4000]
+    unsafePerformIO $ concat <$> mapM genK [10, 20, 40, 80, 120, 140, 150, 160, 170]
         where genK sz = replicateM nSamples . generate $ genMapTree sz
 
