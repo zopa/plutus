@@ -134,19 +134,35 @@ benchSerialiseData =
     -- does the internal structure of a Data object influence serialisation
     -- time?  What causes a Data object to be quick or slow to serialise?
 
-makeBenchmarks :: StdGen -> [Benchmark]
-makeBenchmarks gen =
-    [ benchChooseData
-    , benchConstrData gen
-    , benchMapData
-    , benchListData
-    , benchIData
-    , benchBData
-    , benchUnConstrData
-    , benchUnMapData
-    , benchUnListData
-    , benchUnIData
-    , benchUnBData
-    , benchEqualsData
-    , benchSerialiseData
+
+benchEqualsData2 :: Benchmark
+benchEqualsData2 =
+    bgroup "EqualsData"
+               [ bgroup "listB"    [mkBMs listBsample]
+               , bgroup "listI"    [mkBMs listIsample]
+               , bgroup "listTree" [mkBMs listTreeSample]
+               , bgroup "mapTree"  [mkBMs mapTreeSample]
+               ]
+    where mkBMs sample =
+              createTwoTermBuiltinBenchElementwise EqualsData [] args1 args2
+                  where args1 = sample
+                        args2 = fmap copyData args1
+
+benchSerialiseData2 :: Benchmark
+benchSerialiseData2 =
+    bgroup "SerilaiseData"
+               [ bgroup "listB"    [mkBMs listBsample]
+               , bgroup "listI"    [mkBMs listIsample]
+               , bgroup "listTree" [mkBMs listTreeSample]
+               , bgroup "mapTree"  [mkBMs mapTreeSample]
+               ]
+    where mkBMs sample =
+              createOneTermBuiltinBench SerialiseData [] sample
+
+
+
+makeBenchmarks :: [Benchmark]
+makeBenchmarks =
+    [ benchEqualsData2
+    , benchSerialiseData2
     ]

@@ -202,3 +202,57 @@ dataSample = genDataSample (take 500 $ cycle dataParams)
 -- objects.
 dataSampleForEq :: [Data]
 dataSampleForEq = take 400 . filter (\d -> memoryUsage d < 1000000) . genDataSample . take 1000 $ cycle ((20, (1,1,1)):dataParams)
+
+
+genListB :: Int -> Int -> Gen Data
+genListB len sz = List <$> (resize len $ listOf $ genB sz)
+
+genListI :: Int -> Int -> Gen Data
+genListI len sz = List <$> (resize len $ listOf $ genI sz)
+
+genListTree :: Int -> Gen Data
+genListTree n =
+    if n <= 1
+    then
+        pure $ I 0
+    else
+         List <$> listOf' (genListTree (n `div` 2))
+    where listOf' g = frequency [ (800, resize   10 (listOf g))
+                                , (200, resize  100 (listOf g))
+                                , (2,   resize 1000 (listOf g))
+                                ]
+
+genMapTree :: Int -> Gen Data
+genMapTree n =
+    if n <= 1
+    then
+        pure $ I 0
+    else
+        Map  <$> (listOf' $ (,) <$> genMapTree (n `div` 2) <*> genMapTree (n `div` 2))
+            where listOf' g = frequency [ (800, resize   10 (listOf g))
+                                        , (200, resize  100 (listOf g))
+                                        , (2,   resize 1000 (listOf g))
+                                        ]
+nSamples :: Int
+nSamples = 30
+
+listBsample :: [Data]
+listBsample =
+    unsafePerformIO $ concat <$> mapM genK [(10,10), (50, 10), (100, 10), (10,100), (50, 100), (100, 100), (10, 1000), (50, 1000)]
+        where genK (len, sz) = replicateM nSamples . generate $ genListB len sz
+
+listIsample :: [Data]
+listIsample =
+    unsafePerformIO $ concat <$> mapM genK [(10,10), (50, 10), (100, 10), (10,100), (50, 100), (100, 100), (10, 1000), (50, 1000)]
+        where genK (len, sz) = replicateM nSamples . generate $ genListI len sz
+
+listTreeSample :: [Data]
+listTreeSample =
+    unsafePerformIO $ concat <$> mapM genK [10, 50, 100, 250, 500, 1000, 2000, 4000]
+        where genK sz = replicateM nSamples . generate $ genListTree sz
+
+mapTreeSample :: [Data]
+mapTreeSample =
+    unsafePerformIO $ concat <$> mapM genK [10, 50, 100, 250, 500, 1000, 2000, 4000]
+        where genK sz = replicateM nSamples . generate $ genMapTree sz
+
