@@ -293,9 +293,9 @@ FrameCase cs : stack <| e = case e of
                     let substed = foldl' (\term (vd, arg) -> substituteVarDecl term vd arg) body ps
                     in stack |> substed
                 -- TODO: proper error
-                Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
-        Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
-    _ -> throwingWithCause _MachineError NonTagScrutinized Nothing
+                Nothing -> throwingWithCause _MachineError (WrongNumberOfCaseArgs i) (Just t)
+        Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) (Just $ ckValueToTerm e)
+    _ -> throwingWithCause _MachineError NonConstrScrutinized (Just $ ckValueToTerm e)
 
 substituteVarDecl :: Term TyName Name uni fun () -> VarDecl TyName Name uni fun () -> CkValue uni fun -> Term TyName Name uni fun ()
 substituteVarDecl term (VarDecl _ name _) arg = substituteDb name (ckValueToTerm arg) term

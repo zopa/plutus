@@ -308,41 +308,62 @@ mulInstError2 = Apply () (TyInst () (Apply () mul eleven) string) twentytwo
 mulInstError3 :: Term TyName Name DefaultUni DefaultFun ()
 mulInstError3 = TyInst () (Apply () (Apply () mul eleven) twentytwo) string
 
-prod1 :: Term TyName Name DefaultUni DefaultFun ()
-prod1 = Prod () [mkConstant @Integer () 11, mkConstant @Integer () 12]
-
-proj1 :: Term TyName Name DefaultUni DefaultFun ()
-proj1 = Proj () 0 prod1
-
-proj2 :: Term TyName Name DefaultUni DefaultFun ()
-proj2 = Proj () 1 prod1
-
-proj3 :: Term TyName Name DefaultUni DefaultFun ()
-proj3 = Proj () 2 prod1
-
 tag1 :: Term TyName Name DefaultUni DefaultFun ()
-tag1 = Tag () (TySum () [integer, integer]) 0 (mkConstant @Integer () 1)
+tag1 = Constr () (TySum () [TyProd () [integer], TyProd () [string]]) 0 [mkConstant @Integer () 1]
 
 tag2 :: Term TyName Name DefaultUni DefaultFun ()
-tag2 = Tag () (TySum () [integer, integer]) 1 (mkConstant @Integer () 2)
+tag2 = Constr () (TySum () [TyProd () [integer], TyProd () [string]]) 1 [mkConstant @Text () "hello"]
+
+tagProd1 :: Term TyName Name DefaultUni DefaultFun ()
+tagProd1 = Constr () (TySum () [TyProd () [integer, integer, integer], TyProd () [string]]) 0
+    [mkConstant @Integer () 1, mkConstant @Integer () 2, mkConstant @Integer () 4]
 
 case1 :: Term TyName Name DefaultUni DefaultFun ()
 case1 = runQuote $ do
     a <- freshName "a"
-    let branch = LamAbs () a integer (Var () a)
-    pure $ Case () tag1 [branch, branch]
+    let branch1 = LamAbs () a integer (Var () a)
+        branch2 = LamAbs () a string (mkConstant @Integer () 2)
+    pure $ Case () integer tag1 [branch1, branch2]
 
 case2 :: Term TyName Name DefaultUni DefaultFun ()
 case2 = runQuote $ do
     a <- freshName "a"
-    let branch = LamAbs () a integer (Var () a)
-    pure $ Case () tag2 [branch, branch]
+    let branch1 = LamAbs () a integer (Var () a)
+        branch2 = LamAbs () a string (mkConstant @Integer () 2)
+    pure $ Case () integer tag2 [branch1, branch2]
+
+case3 :: Term TyName Name DefaultUni DefaultFun ()
+case3 = runQuote $ do
+    a <- freshName "a"
+    let branch1 = LamAbs () a integer (mkConstant @Text () "no")
+        branch2 = LamAbs () a string (Var () a)
+    pure $ Case () string tag1 [branch1, branch2]
+
+case4 :: Term TyName Name DefaultUni DefaultFun ()
+case4 = runQuote $ do
+    a <- freshName "a"
+    let branch1 = LamAbs () a integer (mkConstant @Text () "no")
+        branch2 = LamAbs () a string (Var () a)
+    pure $ Case () string tag2 [branch1, branch2]
+
+caseProd1 :: Term TyName Name DefaultUni DefaultFun ()
+caseProd1 = runQuote $ do
+    a <- freshName "a"
+    b <- freshName "b"
+    c <- freshName "c"
+    let branch1 = LamAbs () a integer $ LamAbs () b integer $ LamAbs () c integer $
+                    mkIterApp () (Builtin () SubtractInteger) [
+                      mkIterApp () (Builtin () AddInteger) [Var () a, Var () b]
+                      , Var () c
+                      ]
+        branch2 = LamAbs () a string (mkConstant @Integer () 2)
+    pure $ Case () integer tagProd1 [branch1, branch2]
 
 caseNoBranch :: Term TyName Name DefaultUni DefaultFun ()
-caseNoBranch = Case () tag1 []
+caseNoBranch = Case () integer tag1 []
 
 caseNonTag :: Term TyName Name DefaultUni DefaultFun ()
-caseNonTag = Case () prod1 []
+caseNonTag = Case () integer (mkConstant @Integer () 1) []
 
 -- Running the tests
 
@@ -417,13 +438,14 @@ namesAndTests =
    , ("mulInstError1", mulInstError1)
    , ("mulInstError2", mulInstError2)
    , ("mulInstError3", mulInstError3)
-   , ("prod1", prod1)
-   , ("proj1", proj1)
-   , ("proj2", proj2)
-   , ("proj3", proj3)
    , ("tag1", tag1)
+   , ("tag2", tag2)
+   , ("tagProd1", tagProd1)
    , ("case1", case1)
    , ("case2", case2)
+   , ("case3", case3)
+   , ("case4", case4)
+   , ("caseProd1", caseProd1)
    , ("caseNoBranch", caseNoBranch)
    , ("caseNonTag", caseNonTag)
    ]

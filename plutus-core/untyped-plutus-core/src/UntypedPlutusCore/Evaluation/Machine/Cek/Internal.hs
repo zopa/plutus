@@ -56,7 +56,8 @@ import UntypedPlutusCore.Core
 
 
 import Data.RandomAccessList.Class qualified as Env
-import Data.RandomAccessList.SkewBinary qualified as Env
+import Data.RandomAccessList.SkewBinarySlab qualified as Env hiding (consSlab)
+--import Data.RandomAccessList.SkewBinary qualified as Env
 import PlutusCore.Builtin
 import PlutusCore.DeBruijn
 import PlutusCore.Evaluation.Machine.ExBudget
@@ -82,6 +83,7 @@ import Data.Semigroup (stimes)
 import Data.Text (Text)
 import Data.Vector qualified as V
 import Data.Vector.Mutable qualified as MV
+import Data.Vector.NonEmpty qualified as NEV
 import Data.Word
 import Data.Word64Array.Word8 hiding (Index, toList)
 import Prettyprinter
@@ -209,6 +211,7 @@ data CekValue uni fun =
       (CekValEnv uni fun)    -- For discharging.
       !(BuiltinRuntime (CekValue uni fun))  -- The partial application and its costing function.
                                             -- Check the docs of 'BuiltinRuntime' for details.
+  -- NOTE: args in reverse order! Because that's the order we need them in to cons them onto the environment
   | VConstr {-# UNPACK #-} !Int {-# UNPACK #-} !(V.Vector (CekValue uni fun))
     deriving stock (Show)
 
@@ -489,7 +492,7 @@ dischargeCekValue = \case
     -- We only discharge a value when (a) it's being returned by the machine,
     -- or (b) it's needed for an error message.
     VBuiltin _ term env _                -> dischargeCekValEnv env term
-    VConstr i es                         -> Constr () i (toList $ fmap dischargeCekValue es)
+    VConstr i es                         -> Constr () i (reverse $ toList $ fmap dischargeCekValue es)
 
 instance (Closed uni, GShow uni, uni `Everywhere` PrettyConst, Pretty fun) =>
             PrettyBy PrettyConfigPlc (CekValue uni fun) where
@@ -512,14 +515,14 @@ newAccumulator es =
         t : ts -> do
             let l = length es -- note, length of *whole* list
             emptyArr <- MV.new l
-            pure $ Right (t, Accumulator 0 ts emptyArr)
+            pure $ Right (t, Accumulator (l-1) ts emptyArr)
 
 stepAccumulator :: Accumulator i o s -> o -> ST s (Either (V.Vector o) (i, Accumulator i o s))
 stepAccumulator (Accumulator nextIndex todo arr) next = do
     MV.write arr nextIndex next
     case todo of
         []     -> Left <$> V.unsafeFreeze arr
-        t : ts -> pure $ Right (t, Accumulator (nextIndex+1) ts arr)
+        t : ts -> pure $ Right (t, Accumulator (nextIndex-1) ts arr)
 
 {-|
 The context in which the machine operates.
@@ -703,12 +706,13 @@ enterComputeCek = computeCek (toWordArray 0) where
                 let nArgs = V.length args
                 in case stripNLambdas nArgs t of
                     Just body ->
-                        let extended = foldl' (\ev arg -> Env.cons arg ev) env args
+                        let extended = case NEV.fromVector args of
+                                Just nv -> Env.consSlab nv env
+                                Nothing -> env
                         in computeCek unbudgetedSteps ctx extended body
-                    -- TODO: wrong
-                    Nothing -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
-            Nothing                -> throwingWithCause _MachineError (MissingCaseBranch i) Nothing
-        _ -> throwingWithCause _MachineError NonTagScrutinized Nothing
+                    Nothing -> throwingWithCause _MachineError (WrongNumberOfCaseArgs nArgs) (Just t)
+            Nothing -> throwingDischarged _MachineError (MissingCaseBranch i) e
+        _ -> throwingDischarged _MachineError NonConstrScrutinized e
 
     -- | @force@ a term and proceed.
     -- If v is a delay then compute the body of v;

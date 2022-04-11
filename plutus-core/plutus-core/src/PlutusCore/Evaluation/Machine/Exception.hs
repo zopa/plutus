@@ -74,8 +74,9 @@ data MachineError fun
     | NonProductIndexedMachineError
     | ProductIndexOutOfBoundsMachineError Int
     | MissingCaseScrutinee
-    | NonTagScrutinized
+    | NonConstrScrutinized
     | MissingCaseBranch Int
+    | WrongNumberOfCaseArgs Int
     deriving stock (Show, Eq, Functor, Generic)
     deriving anyclass (NFData)
 
@@ -199,10 +200,12 @@ instance (HasPrettyDefaults config ~ 'True, Pretty fun) =>
         "Product index out of bounds:" <+> pretty i
     prettyBy _      MissingCaseScrutinee =
         "Case expression missing scrutinee"
-    prettyBy _      NonTagScrutinized =
-        "A non-tagged expression was scrutinitzed in a case expression"
+    prettyBy _      NonConstrScrutinized =
+        "A non-constructor value was scrutinitzed in a case expression"
     prettyBy _      (MissingCaseBranch i) =
         "Case expression missing the branch required by the scrutinee tag:" <+> pretty i
+    prettyBy _      (WrongNumberOfCaseArgs i) =
+        "A case branch had the wrong number of arguments, exepcted:" <+> pretty i
 
 instance
         ( HasPrettyDefaults config ~ 'True
@@ -249,8 +252,9 @@ instance HasErrorCode (MachineError err) where
       errorCode        NonProductIndexedMachineError {}             = ErrorCode 17
       errorCode        ProductIndexOutOfBoundsMachineError {}       = ErrorCode 17
       errorCode        MissingCaseScrutinee {}                      = ErrorCode 17
-      errorCode        NonTagScrutinized {}                         = ErrorCode 17
+      errorCode        NonConstrScrutinized {}                      = ErrorCode 17
       errorCode        MissingCaseBranch {}                         = ErrorCode 17
+      errorCode        WrongNumberOfCaseArgs {}                     = ErrorCode 17
 
 instance (HasErrorCode user, HasErrorCode internal) => HasErrorCode (EvaluationError user internal) where
   errorCode (InternalEvaluationError e) = errorCode e
