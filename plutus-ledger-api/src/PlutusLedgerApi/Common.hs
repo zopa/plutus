@@ -3,7 +3,7 @@
 {-|
 Common types and functions used across all the ledger API modules.
 -}
-module Plutus.ApiCommon where
+module PlutusLedgerApi.Common where
 
 import Data.ByteString.Short
 import Data.Foldable (fold)

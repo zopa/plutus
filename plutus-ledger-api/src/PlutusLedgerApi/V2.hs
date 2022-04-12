@@ -2,7 +2,7 @@
 {- |
 The interface to Plutus V2 for the ledger.
 -}
-module Plutus.V2.Ledger.Api (
+module PlutusLedgerApi.V2 (
     -- * Scripts
     SerializedScript
     , Script
@@ -112,8 +112,8 @@ module Plutus.V2.Ledger.Api (
     , EvaluationError (..)
 ) where
 
-import Plutus.V1.Ledger.Api hiding (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
-import Plutus.V1.Ledger.Scripts (ScriptHash (..))
-import Plutus.V2.Ledger.Contexts
-import Plutus.V2.Ledger.Tx (OutputDatum (..))
+import PlutusLedgerApi.V1 hiding (ScriptContext (..), TxInInfo (..), TxInfo (..), TxOut (..))
+import PlutusLedgerApi.V1.Scripts (ScriptHash (..))
+import PlutusLedgerApi.V2.Contexts
+import PlutusLedgerApi.V2.Tx (OutputDatum (..))
 import PlutusTx.AssocMap (Map, fromList)

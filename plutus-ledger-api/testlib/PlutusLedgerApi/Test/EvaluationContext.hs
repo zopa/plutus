@@ -1,11 +1,11 @@
-module Plutus.Ledger.Test.EvaluationContext
+module PlutusLedgerApi.Test.EvaluationContext
     ( costModelParamsForTesting
     , evalCtxForTesting
     ) where
 
-import Plutus.V1.Ledger.EvaluationContext
 import PlutusCore as Plutus
 import PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
+import PlutusLedgerApi.V1.EvaluationContext
 
 import Data.Maybe
 

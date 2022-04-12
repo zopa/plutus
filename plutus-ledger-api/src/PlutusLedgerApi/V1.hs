@@ -7,7 +7,7 @@
 {- |
 The interface to Plutus V1 for the ledger.
 -}
-module Plutus.V1.Ledger.Api (
+module PlutusLedgerApi.V1 (
     -- * Scripts
     SerializedScript
     , Script
@@ -125,18 +125,6 @@ import Data.Either
 import Data.SatInt
 import Data.Set qualified as Set
 import Data.Tuple
-import Plutus.ApiCommon
-import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Bytes
-import Plutus.V1.Ledger.Contexts
-import Plutus.V1.Ledger.Credential
-import Plutus.V1.Ledger.Crypto
-import Plutus.V1.Ledger.DCert
-import Plutus.V1.Ledger.EvaluationContext
-import Plutus.V1.Ledger.Interval hiding (singleton)
-import Plutus.V1.Ledger.Scripts as Scripts
-import Plutus.V1.Ledger.Time
-import Plutus.V1.Ledger.Value
 import PlutusCore as PLC
 import PlutusCore.Data qualified as PLC
 import PlutusCore.Evaluation.Machine.ExBudget (ExBudget (..))
@@ -144,6 +132,18 @@ import PlutusCore.Evaluation.Machine.ExBudget qualified as PLC
 import PlutusCore.Evaluation.Machine.ExMemory (ExCPU (..), ExMemory (..))
 import PlutusCore.MkPlc qualified as PLC
 import PlutusCore.Pretty
+import PlutusLedgerApi.Common
+import PlutusLedgerApi.V1.Address
+import PlutusLedgerApi.V1.Bytes
+import PlutusLedgerApi.V1.Contexts
+import PlutusLedgerApi.V1.Credential
+import PlutusLedgerApi.V1.Crypto
+import PlutusLedgerApi.V1.DCert
+import PlutusLedgerApi.V1.EvaluationContext
+import PlutusLedgerApi.V1.Interval hiding (singleton)
+import PlutusLedgerApi.V1.Scripts as Scripts
+import PlutusLedgerApi.V1.Time
+import PlutusLedgerApi.V1.Value
 import PlutusPrelude (through)
 import PlutusTx (FromData (..), ToData (..), UnsafeFromData (..), fromData, toData)
 import PlutusTx.Builtins.Internal (BuiltinData (..), builtinDataToData, dataToBuiltinData)

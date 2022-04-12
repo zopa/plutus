@@ -56,23 +56,23 @@
           "Codec/CBOR/Extras"
           "Data/Either/Extras"
           "Prettyprinter/Extras"
-          "Plutus/V1/Ledger/Address"
-          "Plutus/V1/Ledger/Api"
-          "Plutus/V1/Ledger/Bytes"
-          "Plutus/V1/Ledger/Contexts"
-          "Plutus/V1/Ledger/Credential"
-          "Plutus/V1/Ledger/Crypto"
-          "Plutus/V1/Ledger/DCert"
-          "Plutus/V1/Ledger/Interval"
-          "Plutus/V1/Ledger/Scripts"
-          "Plutus/V1/Ledger/Tx"
-          "Plutus/V1/Ledger/Time"
-          "Plutus/V1/Ledger/Value"
-          "Plutus/V1/Ledger/EvaluationContext"
-          "Plutus/V2/Ledger/Api"
-          "Plutus/V2/Ledger/Contexts"
-          "Plutus/V2/Ledger/Tx"
-          "Plutus/ApiCommon"
+          "PlutusLedgerApi/V1"
+          "PlutusLedgerApi/V1/Address"
+          "PlutusLedgerApi/V1/Bytes"
+          "PlutusLedgerApi/V1/Contexts"
+          "PlutusLedgerApi/V1/Credential"
+          "PlutusLedgerApi/V1/Crypto"
+          "PlutusLedgerApi/V1/DCert"
+          "PlutusLedgerApi/V1/Interval"
+          "PlutusLedgerApi/V1/Scripts"
+          "PlutusLedgerApi/V1/Tx"
+          "PlutusLedgerApi/V1/Time"
+          "PlutusLedgerApi/V1/Value"
+          "PlutusLedgerApi/V1/EvaluationContext"
+          "PlutusLedgerApi/V2"
+          "PlutusLedgerApi/V2/Contexts"
+          "PlutusLedgerApi/V2/Tx"
+          "PlutusLedgerApi/Common"
           ];
         hsSourceDirs = [ "src" ];
         };
@@ -88,9 +88,9 @@
             ];
           buildable = true;
           modules = [
-            "Plutus/Ledger/Test/Examples"
-            "Plutus/Ledger/Test/EvaluationContext"
-            "Plutus/Ledger/Test/Scripts"
+            "PlutusLedgerApi/Test/Examples"
+            "PlutusLedgerApi/Test/EvaluationContext"
+            "PlutusLedgerApi/Test/Scripts"
             ];
           hsSourceDirs = [ "testlib" ];
           };

@@ -4,7 +4,7 @@
 -- ticks for the simplifier not to run out of them.
 {-# OPTIONS_GHC -fsimpl-tick-factor=200 #-}
 
-module Plutus.V1.Ledger.EvaluationContext
+module PlutusLedgerApi.V1.EvaluationContext
     ( EvaluationContext
     , mkEvaluationContext
     , CostModelParams
@@ -20,7 +20,7 @@ import PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import PlutusCore.Evaluation.Machine.MachineParameters as Plutus
 import UntypedPlutusCore.Evaluation.Machine.Cek as Plutus
 
-import Plutus.ApiCommon
+import PlutusLedgerApi.Common
 
 import Control.DeepSeq
 import Data.Map as Map
