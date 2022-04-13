@@ -20,6 +20,7 @@ import Flat
 import Flat.Decoder
 import Flat.Decoder.Types
 import Flat.Encoder
+import Data.Semigroup
 import Universe
 
 import Data.Primitive (Ptr)
@@ -100,6 +101,15 @@ encodeTermTag = safeEncodeBits termTagWidth
 decodeTermTag :: Get Word8
 decodeTermTag = dBEBits8 termTagWidth
 
+lamTagWidth :: NumBits
+lamTagWidth = 3
+
+encodeLamTag :: Word8 -> Encoding
+encodeLamTag = safeEncodeBits lamTagWidth
+
+decodeLamTag :: Get Word8
+decodeLamTag = dBEBits8 lamTagWidth
+
 encodeTerm
     :: forall name uni fun ann
     . ( Closed uni
@@ -115,12 +125,22 @@ encodeTerm
 encodeTerm = \case
     Var      ann n    -> encodeTermTag 0 <> encode ann <> encode n
     Delay    ann t    -> encodeTermTag 1 <> encode ann <> encode t
-    LamAbs   ann n t  -> encodeTermTag 2 <> encode ann <> encode (Binder n) <> encode t
     Apply    ann t t' -> encodeTermTag 3 <> encode ann <> encode t <> encode t'
     Constant ann c    -> encodeTermTag 4 <> encode ann <> encode c
     Force    ann t    -> encodeTermTag 5 <> encode ann <> encode t
     Error    ann      -> encodeTermTag 6 <> encode ann
     Builtin  ann bn   -> encodeTermTag 7 <> encode ann <> encode bn
+    LamAbs ann n t@LamAbs{} -> encodeTermTag 8 <> encodeChunkLam 0 ann n t
+    LamAbs ann n t -> encodeTermTag 2 <> encode ann <> encode (Binder n) <> encode t
+
+encodeChunkLam :: (Everywhere uni Flat, Closed uni,
+ PrettyBy PrettyConfigPlc (Term name1 uni fun ann), Flat a,
+ Flat fun, Flat ann, Flat name1, Flat (Binder name2),
+ Flat (Binder name1)) => Word8 -> a -> name2 -> Term name1 uni fun ann -> Encoding
+
+encodeChunkLam l ann n = \case
+    LamAbs _ _ t | l < 2 ^ lamTagWidth -> encodeChunkLam (l+1) ann n t
+    t -> encodeLamTag (l-1) <> encode ann <> encode (Binder n) <> encode t
 
 data SizeLimit = NoLimit | Limit Integer
 
@@ -165,6 +185,11 @@ decodeTerm sizeLimit = go =<< decodeTermTag
           go 5 = Force    <$> decode <*> decode
           go 6 = Error    <$> decode
           go 7 = Builtin  <$> decode <*> decode
+          go 8 = do
+               len <- decodeLamTag
+               ann <- decode
+               b <-  unBinder <$> decode
+               appEndo (stimes (len+2) (Endo $ LamAbs ann b)) <$> decode
           go t = fail $ "Unknown term constructor tag: " ++ show t
 
 sizeTerm
@@ -183,12 +208,17 @@ sizeTerm
 sizeTerm tm sz = termTagWidth + sz + case tm of
     Var      ann n    -> getSize ann + getSize n
     Delay    ann t    -> getSize ann + getSize t
-    LamAbs   ann n t  -> getSize ann + getSize n + getSize t
     Apply    ann t t' -> getSize ann + getSize t + getSize t'
     Constant ann c    -> getSize ann + getSize c
     Force    ann t    -> getSize ann + getSize t
     Error    ann      -> getSize ann
     Builtin  ann bn   -> getSize ann + getSize bn
+    LamAbs   ann n t@LamAbs{} -> lamTagWidth + getSize ann + getSize n + lamChunkSize (0::Word8) t
+    LamAbs   ann n t  -> getSize ann + getSize n + getSize t
+  where
+    lamChunkSize l = \case
+        LamAbs _ _ t | l < 2 ^ lamTagWidth -> lamChunkSize (l+1) t
+        t -> getSize t
 
 -- | A newtype to indicate that the program should be serialized with size checks
 -- for constants.
