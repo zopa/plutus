@@ -56,8 +56,8 @@ import UntypedPlutusCore.Core
 
 
 import Data.RandomAccessList.Class qualified as Env
-import Data.RandomAccessList.SkewBinarySlab qualified as Env hiding (consSlab)
---import Data.RandomAccessList.SkewBinary qualified as Env
+--import Data.RandomAccessList.SkewBinarySlab qualified as Env hiding (consSlab)
+import Data.RandomAccessList.SkewBinary qualified as Env
 import PlutusCore.Builtin
 import PlutusCore.DeBruijn
 import PlutusCore.Evaluation.Machine.ExBudget
