@@ -48,7 +48,7 @@ import Test.Tasty.Hedgehog
 defaultCekParametersExt
     :: MachineParameters CekMachineCosts CekValue DefaultUni (Either DefaultFun ExtensionFun)
 defaultCekParametersExt =
-    mkMachineParameters defaultUnliftingMode $
+    mkMachineParameters (defaultVersion ()) defaultUnliftingMode $
         CostModel defaultCekMachineCosts (defaultBuiltinCostModel, ())
 
 -- | Check that 'Factorial' from the above computes to the same thing as
@@ -121,7 +121,7 @@ test_IdFInteger =
 test_IdList :: TestTree
 test_IdList =
     testCase "IdList" $ do
-        let tyAct = typeOfBuiltinFunction @DefaultUni IdList
+        let tyAct = typeOfBuiltinFunction @DefaultUni (defaultVersion ()) IdList
             tyExp = let a = TyName . Name "a" $ Unique 0
                         listA = TyApp () Scott.listTy (TyVar () a)
                     in TyForall () a (Type ()) $ TyFun () listA listA
@@ -553,6 +553,26 @@ test_Other = testCase "Other" $ do
     let expr3 = mkIterApp () (tyInst () (builtin () Trace) integer) [cons @Text "hello world", cons @Integer 1]
     Right (EvaluationSuccess $ cons @Integer 1) @=? typecheckEvaluateCekNoEmit defaultCekParameters expr3
 
+defaultCekParametersExtV0
+    :: MachineParameters CekMachineCosts CekValue DefaultUni (Either DefaultFun ExtensionFun)
+defaultCekParametersExtV0 =
+    mkMachineParameters (Version () 0 5 9) defaultUnliftingMode $
+        CostModel defaultCekMachineCosts (defaultBuiltinCostModel, ())
+
+defaultCekParametersExtV2
+    :: MachineParameters CekMachineCosts CekValue DefaultUni (Either DefaultFun ExtensionFun)
+defaultCekParametersExtV2 =
+    mkMachineParameters (Version () 2 3 1) defaultUnliftingMode $
+        CostModel defaultCekMachineCosts (defaultBuiltinCostModel, ())
+
+-- | Check that 'MajorVersion' fails for non-existing plutus-version 0
+test_Version :: TestTree
+test_Version =
+    testCase "Version" $ do
+        let expr1 = apply () (builtin () $ Right MajorVersion) unitval
+        Right EvaluationFailure @=? typecheckEvaluateCekNoEmit defaultCekParametersExtV0 expr1
+        Right (EvaluationSuccess $ cons @Integer 2)  @=? typecheckEvaluateCekNoEmit defaultCekParametersExtV2 expr1
+
 -- shorthand
 cons :: (Contains DefaultUni a, TermLike term tyname name DefaultUni fun) => a -> term ()
 cons = mkConstant ()
@@ -597,4 +617,5 @@ test_definition =
         , test_Data
         , test_Crypto
         , test_Other
+        , test_Version
         ]

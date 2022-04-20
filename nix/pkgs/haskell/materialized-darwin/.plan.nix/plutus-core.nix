@@ -316,7 +316,6 @@
             (hsPkgs."integer-gmp" or (errorHandler.buildDepError "integer-gmp"))
             (hsPkgs."lazy-search" or (errorHandler.buildDepError "lazy-search"))
             (hsPkgs."lens" or (errorHandler.buildDepError "lens"))
-            (hsPkgs."megaparsec" or (errorHandler.buildDepError "megaparsec"))
             (hsPkgs."mmorph" or (errorHandler.buildDepError "mmorph"))
             (hsPkgs."mtl" or (errorHandler.buildDepError "mtl"))
             (hsPkgs."plutus-core" or (errorHandler.buildDepError "plutus-core"))
@@ -359,7 +358,6 @@
             (hsPkgs."base" or (errorHandler.buildDepError "base"))
             (hsPkgs."containers" or (errorHandler.buildDepError "containers"))
             (hsPkgs."extra" or (errorHandler.buildDepError "extra"))
-            (hsPkgs."vector" or (errorHandler.buildDepError "vector"))
             (hsPkgs."nonempty-vector" or (errorHandler.buildDepError "nonempty-vector"))
             (hsPkgs."ral" or (errorHandler.buildDepError "ral"))
             ];

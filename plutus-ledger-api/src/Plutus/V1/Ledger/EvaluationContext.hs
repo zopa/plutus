@@ -5,17 +5,17 @@
 {-# OPTIONS_GHC -fsimpl-tick-factor=200 #-}
 
 module Plutus.V1.Ledger.EvaluationContext
-    ( EvaluationContext
+    ( EvaluationContext (..)
+    , DefaultMachineParameters
     , mkEvaluationContext
     , CostModelParams
     , isCostModelParamsWellFormed
-    , machineParametersImmediate
-    , machineParametersDeferred
     , toMachineParameters
     , costModelParamNames
     ) where
 
-import PlutusCore as Plutus (DefaultFun, DefaultUni, UnliftingMode (..), defaultCekCostModel, defaultCostModelParams)
+import PlutusCore as Plutus (DefaultFun, DefaultUni, UnliftingMode (..), Version (..), defaultCekCostModel,
+                             defaultCostModelParams)
 import PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import PlutusCore.Evaluation.Machine.MachineParameters as Plutus
 import UntypedPlutusCore.Evaluation.Machine.Cek as Plutus
@@ -77,7 +77,7 @@ inlining).
 
 mkMachineParametersFor :: UnliftingMode -> Plutus.CostModelParams -> Maybe DefaultMachineParameters
 mkMachineParametersFor unlMode newCMP =
-    inline Plutus.mkMachineParameters unlMode <$>
+    inline Plutus.mkMachineParameters (Version () 1 0 0) unlMode <$>
         Plutus.applyCostModelParams Plutus.defaultCekCostModel newCMP
 {-# INLINE mkMachineParametersFor #-}
 

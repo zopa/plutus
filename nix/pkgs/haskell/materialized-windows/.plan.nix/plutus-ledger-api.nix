@@ -71,6 +71,7 @@
           "Plutus/V1/Ledger/EvaluationContext"
           "Plutus/V2/Ledger/Api"
           "Plutus/V2/Ledger/Contexts"
+          "Plutus/V2/Ledger/EvaluationContext"
           "Plutus/V2/Ledger/Tx"
           "Plutus/ApiCommon"
           ];
