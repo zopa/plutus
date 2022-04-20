@@ -744,10 +744,14 @@ instance uni ~ DefaultUni => ToBuiltinMeaning uni DefaultFun where
         makeBuiltinMeaning
             BS.append
             (runCostingFunTwoArguments . paramAppendByteString)
-    toBuiltinMeaning _ver ConsByteString =
-        makeBuiltinMeaning
-            (\n xs -> BS.cons (fromIntegral @Integer n) xs)
-            (runCostingFunTwoArguments . paramConsByteString)
+    toBuiltinMeaning (Version _ majorVer _ _) ConsByteString =
+        if majorVer > 1
+        then makeBuiltinMeaning
+              (\(n :: Word8) xs -> BS.cons n xs)
+              (runCostingFunTwoArguments . paramConsByteString)
+        else makeBuiltinMeaning
+               (\n xs -> BS.cons (fromIntegral @Integer n) xs)
+               (runCostingFunTwoArguments . paramConsByteString)
     toBuiltinMeaning _ver SliceByteString =
         makeBuiltinMeaning
             (\start n xs -> BS.take n (BS.drop start xs))

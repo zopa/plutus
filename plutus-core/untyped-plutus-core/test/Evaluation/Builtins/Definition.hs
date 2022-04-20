@@ -38,6 +38,7 @@ import Data.ByteString (ByteString)
 import Data.Either
 import Data.Proxy
 import Data.Text (Text)
+import Data.Word
 import Hedgehog hiding (Opaque, Size, Var)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -573,6 +574,18 @@ test_Version =
         Right EvaluationFailure @=? typecheckEvaluateCekNoEmit defaultCekParametersExtV0 expr1
         Right (EvaluationSuccess $ cons @Integer 2)  @=? typecheckEvaluateCekNoEmit defaultCekParametersExtV2 expr1
 
+-- | Check that 'ConsByteString' wraps around for plutus-version < 2, and fails in versions >=2.
+test_ConsByteString :: TestTree
+test_ConsByteString =
+    testCase "Version" $ do
+        let asciiBangWrapped = fromIntegral @Word8 @Integer maxBound
+                             + 1 -- to make word8 wraparound
+                             + 33 -- the index of '!' in ascii table
+            expr1 = mkIterApp () (builtin () $ Left ConsByteString) [cons @Integer asciiBangWrapped, cons @ByteString "hello world"]
+        Right (EvaluationSuccess $ cons @ByteString "!hello world")  @=? typecheckEvaluateCekNoEmit defaultCekParametersExtV0 expr1
+        Right EvaluationFailure @=? typecheckEvaluateCekNoEmit defaultCekParametersExtV2 expr1
+
+
 -- shorthand
 cons :: (Contains DefaultUni a, TermLike term tyname name DefaultUni fun) => a -> term ()
 cons = mkConstant ()
@@ -618,4 +631,5 @@ test_definition =
         , test_Crypto
         , test_Other
         , test_Version
+        , test_ConsByteString
         ]
