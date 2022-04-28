@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 module Evaluation.Spec where
 
@@ -100,8 +101,10 @@ genArgs bn = sequenceA $ case meaning of
     meaning :: BuiltinMeaning Term (CostingPart DefaultUni DefaultFun)
     meaning = toBuiltinMeaning bn
 
+type StarRep = TypeRep @(*)
+
 -- | Generate one argument to a builtin function based on its `TypeRep`.
-genArg :: forall k (a :: k). TypeRep a -> Gen (Some (ValueOf DefaultUni), String)
+genArg :: StarRep a -> Gen (Some (ValueOf DefaultUni), String)
 genArg tr
     | Just HRefl <- eqTypeRep tr (typeRep @()) = pure $ mkArg ()
     | Just HRefl <- eqTypeRep tr (typeRep @Integer) = mkArg <$> genInteger
@@ -110,7 +113,8 @@ genArg tr
     | Just HRefl <- eqTypeRep tr (typeRep @BS.ByteString) = mkArg <$> genByteString
     | Just HRefl <- eqTypeRep tr (typeRep @Text) = mkArg <$> genText
     | Just HRefl <- eqTypeRep tr (typeRep @Data) = mkArg <$> genData 5
-    | Just [SomeTypeRep tr1, SomeTypeRep tr2] <- matchTyCon @(,) tr = do
+    | Just [checkStarRep -> Just (Some tr1), checkStarRep -> Just (Some tr2)] <-
+            matchTyCon @(,) tr = do
         (Some (ValueOf uni1 val1), argStr1) <- genArg tr1
         (Some (ValueOf uni2 val2), argStr2) <- genArg tr2
         pure
@@ -119,7 +123,7 @@ genArg tr
                 (val1, val2)
             , show (argStr1, argStr2)
             )
-    | Just [SomeTypeRep trElem] <- matchTyCon @[] tr = do
+    | Just [checkStarRep -> Just (Some trElem)] <- matchTyCon @[] tr = do
         (Some (ValueOf uniElem (_ :: b)), _) <- genArg trElem
         (args, argStrings) <- unzip <$> (Gen.list (Range.linear 0 10) $ genArg trElem)
         let valElems :: [b]
@@ -129,9 +133,9 @@ genArg tr
             , show argStrings
             )
     -- Descend upon `Opaque`
-    | Just [_, SomeTypeRep tr'] <- matchTyCon @Opaque tr = genArg tr'
+    | Just [_, checkStarRep -> Just (Some tr')] <- matchTyCon @Opaque tr = genArg tr'
     -- Descend upon `SomeConstant`
-    | Just [_, SomeTypeRep tr'] <- matchTyCon @SomeConstant tr = genArg tr'
+    | Just [_, checkStarRep -> Just (Some tr')] <- matchTyCon @SomeConstant tr = genArg tr'
     -- In the current implementation, all type variables are instantiated
     -- to `Integer` (TODO: change this).
     | Just _ <- matchTyCon @(TyVarRep @GHC.Type) tr =
@@ -143,6 +147,11 @@ genArg tr
 mkArg :: (Contains DefaultUni a, Show a) => a -> (Some (ValueOf DefaultUni), String)
 mkArg a = (someValue a, show a)
 
+checkStarRep :: SomeTypeRep -> Maybe (Some StarRep)
+checkStarRep (SomeTypeRep tr) = do
+    Refl <- typeRepKind tr `testEquality` typeRep @(*)
+    Just $ Some tr
+
 -- | If the given `TypeRep`'s `TyCon` is @con@, return its type arguments.
 matchTyCon :: forall con a. (Typeable con) => TypeRep a -> Maybe [SomeTypeRep]
 matchTyCon tr = if con == con' then Just args else Nothing
@@ -150,13 +159,13 @@ matchTyCon tr = if con == con' then Just args else Nothing
     (con, args) = splitTyConApp (SomeTypeRep tr)
     con' = typeRepTyCon (typeRep @con)
 
--- | If the given `TypeRep`'s `TyCon` matches the given module and name, return its type arguments.
-matchTyCon' :: forall a. String -> String -> TypeRep a -> Maybe [SomeTypeRep]
-matchTyCon' modu name tr = if modu == modu' && name == name' then Just args else Nothing
-  where
-    (con, args) = splitTyConApp (SomeTypeRep tr)
-    modu' = tyConModule con
-    name' = tyConName con
+-- -- | If the given `TypeRep`'s `TyCon` matches the given module and name, return its type arguments.
+-- matchTyCon' :: forall a. String -> String -> TypeRep a -> Maybe [SomeTypeRep]
+-- matchTyCon' modu name tr = if modu == modu' && name == name' then Just args else Nothing
+--   where
+--     (con, args) = splitTyConApp (SomeTypeRep tr)
+--     modu' = tyConModule con
+--     name' = tyConName con
 
 type family Head a where
     Head (x ': xs) = x
