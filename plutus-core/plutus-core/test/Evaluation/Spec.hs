@@ -14,7 +14,7 @@ module Evaluation.Spec (test_evaluation) where
 import PlutusCore hiding (Term)
 import PlutusCore qualified as PLC
 import PlutusCore.Builtin
-import PlutusCore.Generators (forAllNoShow, genValArg)
+import PlutusCore.Generators (forAllNoShow, genArg)
 import PlutusCore.Generators.AST
 import PlutusCore.Pretty
 
@@ -85,21 +85,24 @@ prop_builtinsDon'tThrow bn = property $ do
  TODO: currently it only generates constant terms.
 -}
 genArgsWellTyped :: DefaultFun -> Gen [Term]
-genArgsWellTyped = genArgs (fmap (Constant ()) . genValArg)
+genArgsWellTyped = genArgs genArg
 
 -- | Generate arbitrary (most likely ill-typed) Term arguments to a builtin function.
 genArgsArbitrary :: DefaultFun -> Gen [Term]
 genArgsArbitrary = genArgs (const (runAstGen genTerm))
 
 -- | Generate value arguments to a builtin function based on its `TypeScheme`.
-genArgs :: (forall k (a :: k). TypeRep a -> Gen Term) -> DefaultFun -> Gen [Term]
-genArgs genArg bn = sequenceA $ case meaning of
+genArgs
+    :: (forall (a :: *). MakeKnownIn DefaultUni Term a => TypeRep a -> Gen Term)
+    -> DefaultFun
+    -> Gen [Term]
+genArgs genA bn = sequenceA $ case meaning of
     BuiltinMeaning tySch _ _ -> go tySch
       where
         go :: forall args res. TypeScheme Term args res -> [Gen Term]
         go = \case
             TypeSchemeResult    -> []
-            TypeSchemeArrow sch -> genArg (typeRep @(Head args)) : go sch
+            TypeSchemeArrow sch -> genA (typeRep @(Head args)) : go sch
             TypeSchemeAll _ sch -> go sch
   where
     meaning :: BuiltinMeaning Term (CostingPart DefaultUni DefaultFun)
