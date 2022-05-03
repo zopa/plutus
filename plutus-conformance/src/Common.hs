@@ -2,13 +2,13 @@
 
 module PlutusConformance.Common where
 
-import Data.Text hiding (map)
-import Data.Text.IO
+import Control.Monad.Error.Class
+import Data.Text qualified as T
+import GHC.IO (unsafePerformIO)
 import PlutusCore as PLC
-import PlutusCore.Pretty
+import PlutusCore.Error (AsParserErrorBundle)
 import Prelude hiding (readFile)
 import Test.Tasty
-import Test.Tasty.Golden
 import Test.Tasty.HUnit
 import UntypedPlutusCore qualified as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek (unsafeEvaluateCekNoEmit)
@@ -23,7 +23,13 @@ data TestContent =
 
 mkTestContents :: [FilePath] -> [EvaluationResult UplcProg] -> [UplcProg] -> [TestContent]
 mkTestContents lFilepaths lRes lProgs =
-    [MkTestContent file res prog | file <- lFilepaths, res <- lRes, prog <- lProgs]
+    if length lFilepaths == length lRes && length  lRes == length lProgs then
+        [MkTestContent file res prog | file <- lFilepaths, res <- lRes, prog <- lProgs]
+    else
+        error $ "Cannot run the tests because the number of input and output programs are not the same. " <>
+            "Number of input files: " <> show (length lProgs) <>
+            " Number of output files: " <> show (length lRes) <>
+            " Make sure all your input programs have an accompanying .expected file."
 
 type UplcProg = UPLC.Program Name DefaultUni DefaultFun ()
 
@@ -37,16 +43,27 @@ evalUplcProg p = pure $
         (unsafeEvaluateCekNoEmit PLC.defaultCekParameters (UPLC._progTerm p))
 
 mkTestCases :: [TestContent] -> (UplcProg -> IO (EvaluationResult UplcProg)) -> [TestTree]
-mkTestCases (hdTests:tlTests) runner =
-    testCase (testName hdTests) ((expected hdTests) @=? (runner (inputProg hdTests))) : mkTestCases tlTests runner
-mkTestCases [] runner = []
+mkTestCases tests runner
+  = [ unsafePerformIO $ do
+      result <- runner (inputProg test)
+      pure $ testCase (testName test) (expected test @=? result)
+       | test <- tests]
 
 testUplcEvaluation :: [TestContent] -> (UplcProg -> IO (EvaluationResult UplcProg)) -> TestTree
 testUplcEvaluation lTest runner =
     testGroup "UPLC evaluation tests" $ mkTestCases lTest runner
 
-testUplcEvaluationTextual :: (Text -> IO Text) -> TestTree
-testUplcEvaluationTextual runner = testUplcEvaluation undefined undefined --(evalUplcProg . UPLC.parseProgram <$> runner . pack . show)
+testUplcEvaluationTextual :: (T.Text -> IO T.Text) -> TestTree
+testUplcEvaluationTextual runner = testUplcEvaluation [] (evalUplcProg . parseWOPos <$> runner . T.pack . show)
+
+stripePos :: UPLC.Program Name DefaultUni DefaultFun SourcePos -> UplcProg
+stripePos (UPLC.Program _ann ver tm) = UPLC.Program () ver tm
+
+parseWOPos :: (AsParserErrorBundle e, MonadError e m, MonadQuote m) => T.Text -> m (UPLC.Program Name DefaultUni DefaultFun ())
+parseWOPos txt = do
+    prog <- UPLC.parseProgram txt
+    pure $ stripePos prog
+
 
 -- runAgdaImpl = callProcess “agdaImpl …”
 
