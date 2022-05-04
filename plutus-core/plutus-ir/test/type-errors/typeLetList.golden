@@ -1,0 +1,89 @@
+E016: Error during PIR typechecking:
+Type mismatch at typeLetList:28:6 in term
+  '(abs
+    a
+    (type)
+    (iwrap
+      (lam
+        List
+        (fun (type) (type))
+        (lam
+          a
+          (type)
+          (all
+            out_List
+            (type)
+            (fun out_List (fun (fun a (fun [ List a ] out_List)) out_List))
+          )
+        )
+      )
+      a
+      (abs
+        out_List
+        (type)
+        (lam
+          case_Nil
+          out_List
+          (lam
+            case_Cons
+            (fun
+              a
+              (fun
+                [
+                  (lam
+                    a
+                    (type)
+                    (ifix
+                      (lam
+                        List
+                        (fun (type) (type))
+                        (lam
+                          a
+                          (type)
+                          (all
+                            out_List
+                            (type)
+                            (fun
+                              out_List
+                              (fun (fun a (fun [ List a ] out_List)) out_List)
+                            )
+                          )
+                        )
+                      )
+                      a
+                    )
+                  )
+                  a
+                ]
+                out_List
+              )
+            )
+            case_Nil
+          )
+        )
+      )
+    )
+  )'.
+Expected type
+  '(all
+    a
+    (type)
+    (ifix
+      (lam
+        List
+        (fun (type) (type))
+        (lam
+          a
+          (type)
+          (all
+            out_List
+            (type)
+            (fun out_List (fun (fun a (fun [ List a ] out_List)) out_List))
+          )
+        )
+      )
+      a
+    )
+  )',
+found type
+  '(all a (type) [ List a ])'
