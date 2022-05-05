@@ -44,6 +44,8 @@ import Data.Proxy
 import Data.Text qualified as Text
 import GHC.Exts (inline, oneShot)
 import Universe as Export
+import Data.Bits (toIntegralSized)
+import Data.Word
 
 {- Note [PLC types and universes]
 We encode built-in types in PLC as tags for Haskell types (the latter are also called meta-types),
@@ -347,3 +349,21 @@ instance Closed DefaultUni where
     bring _ (f `DefaultUniApply` _ `DefaultUniApply` _ `DefaultUniApply` _) _ =
         noMoreTypeFunctions f
     bring _ DefaultUniData r = r
+
+
+instance KnownTypeAst DefaultUni Word8 where
+    toTypeAst _ = toTypeAst $ Proxy @Word8
+
+-- See Note [Int/Word8 as Integer].
+instance HasConstantIn DefaultUni term => MakeKnownIn DefaultUni term Word8 where
+    makeKnown = makeKnown . toInteger
+    {-# INLINE makeKnown #-}
+
+instance HasConstantIn DefaultUni term => ReadKnownIn DefaultUni term Word8 where
+    readKnown term =
+        inline readKnownConstant term >>= oneShot \(i :: Integer) ->
+           case toIntegralSized i of
+               Just w8 -> pure w8
+               _       -> throwing_ _EvaluationFailure
+    {-# INLINE readKnown #-}
+

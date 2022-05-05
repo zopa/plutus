@@ -78,15 +78,15 @@ defaultCostModelParams = extractCostModelParams defaultCekCostModel
 defaultUnliftingMode :: UnliftingMode
 defaultUnliftingMode = UnliftingImmediate
 
-defaultCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni DefaultFun
+defaultCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni TaggedDefaultFun
 defaultCekParameters = mkMachineParameters defaultUnliftingMode defaultCekCostModel
 
-unitCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni DefaultFun
+unitCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni TaggedDefaultFun
 unitCekParameters =
     mkMachineParameters defaultUnliftingMode $
         CostModel unitCekMachineCosts unitCostBuiltinCostModel
 
-defaultBuiltinsRuntime :: HasConstantIn DefaultUni term => BuiltinsRuntime DefaultFun term
+defaultBuiltinsRuntime :: HasConstantIn DefaultUni term => BuiltinsRuntime TaggedDefaultFun term
 defaultBuiltinsRuntime = toBuiltinsRuntime defaultUnliftingMode defaultBuiltinCostModel
 
 
