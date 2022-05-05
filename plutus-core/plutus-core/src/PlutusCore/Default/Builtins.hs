@@ -708,6 +708,8 @@ instance KnownVersion 'DefaultFunV1 where
 instance KnownVersion 'DefaultFunV2 where
     knownVersion = DefaultFunV2
 
+type TaggedDefaultFun = Tagged 'DefaultFunV2 DefaultFun
+
 instance (uni ~ DefaultUni, Typeable ver, KnownVersion ver) =>
             ToBuiltinMeaning uni (Tagged ver DefaultFun) where
     type CostingPart uni (Tagged ver DefaultFun) = BuiltinCostModel
