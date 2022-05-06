@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE StrictData     #-}
-{-# LANGUAGE TypeFamilies   #-}
-{-# LANGUAGE TypeOperators  #-}
+{-# LANGUAGE DeriveAnyClass   #-}
+{-# LANGUAGE StrictData       #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE TypeOperators    #-}
 
 
 module PlutusCore.Evaluation.Machine.MachineParameters
@@ -12,6 +13,8 @@ import PlutusCore.Builtin
 import PlutusCore.Evaluation.Machine.ExBudget ()
 
 import Control.DeepSeq
+import Data.Proxy
+import Data.Tagged
 import GHC.Exts (inline)
 import GHC.Generics
 import GHC.Types (Type)
@@ -57,3 +60,23 @@ mkMachineParameters ::
 mkMachineParameters unlMode (CostModel mchnCosts builtinCosts) =
     MachineParameters mchnCosts (inline toBuiltinsRuntime unlMode builtinCosts)
 {-# INLINE mkMachineParameters #-}
+
+detagBuiltinsRuntime :: BuiltinsRuntime (Tagged ver fun) val -> BuiltinsRuntime fun val
+detagBuiltinsRuntime = undefined
+
+-- See Note [Inlining meanings of builtins].
+{-| This just uses 'toBuiltinsRuntime' function to convert a BuiltinCostModel to a BuiltinsRuntime. -}
+mkVersionedMachineParameters ::
+    ( -- In Cek.Internal we have `type instance UniOf (CekValue uni fun) = uni`, but we don't know that here.
+      CostingPart uni (Tagged ver fun) ~ builtincosts
+    , HasConstantIn uni (val uni fun)
+    , ToBuiltinMeaning uni (Tagged ver fun)
+    )
+    => Proxy ver
+    -> UnliftingMode
+    -> CostModel machinecosts builtincosts
+    -> MachineParameters machinecosts val uni fun
+mkVersionedMachineParameters (_ :: Proxy ver) unlMode (CostModel mchnCosts builtinCosts) =
+    MachineParameters mchnCosts . detagBuiltinsRuntime @ver $
+        inline toBuiltinsRuntime unlMode builtinCosts
+{-# INLINE mkVersionedMachineParameters #-}

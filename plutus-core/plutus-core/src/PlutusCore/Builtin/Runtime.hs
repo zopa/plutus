@@ -125,7 +125,7 @@ instance NFData (BuiltinRuntime val) where
 
 -- | A 'BuiltinRuntime' for each builtin from a set of builtins.
 newtype BuiltinsRuntime fun val = BuiltinsRuntime
-    { unBuiltinRuntime :: Array fun (BuiltinRuntime val)
+    { unBuiltinsRuntime :: Array fun (BuiltinRuntime val)
     }
 
 deriving newtype instance (NFData fun) => NFData (BuiltinsRuntime fun val)
