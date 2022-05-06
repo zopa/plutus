@@ -2,6 +2,7 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module PlutusCore
     (
@@ -164,18 +165,19 @@ import Control.Monad.Except
 import Data.Text qualified as T
 import PlutusCore.Parser (parseProgram, parseTerm, parseType)
 import Text.Megaparsec (SourcePos, initialPos)
+import Data.Tagged
 
 topSourcePos :: SourcePos
 topSourcePos = initialPos "top"
 
-printType ::(AsParserErrorBundle e, AsUniqueError e SourcePos, AsTypeError e (Term TyName Name DefaultUni DefaultFun ()) DefaultUni DefaultFun SourcePos,
+printType ::(AsParserErrorBundle e, AsUniqueError e SourcePos, AsTypeError e (Term TyName Name DefaultUni (CurVer DefaultFun) ()) DefaultUni (CurVer DefaultFun) SourcePos,
         MonadError e m)
     => T.Text
     -> m T.Text
 printType txt = runQuoteT $ T.pack . show . pretty <$> do
     scoped <- parseScoped txt
     config <- getDefTypeCheckConfig topSourcePos
-    inferTypeOfProgram config scoped
+    inferTypeOfProgram config (coerce @(Program TyName Name DefaultUni DefaultFun SourcePos) @(Program TyName Name DefaultUni (CurVer DefaultFun) SourcePos) scoped)
 
 -- | Parse and rewrite so that names are globally unique, not just unique within
 -- their scope.
@@ -189,11 +191,11 @@ parseScoped = through (Uniques.checkProgram (const True)) <=< rename <=< parsePr
 
 -- | Typecheck a program.
 typecheckPipeline
-    :: (AsTypeError e (Term TyName Name DefaultUni DefaultFun ()) DefaultUni DefaultFun a,
+    :: (AsTypeError e (Term TyName Name DefaultUni (CurVer DefaultFun) ()) DefaultUni (CurVer DefaultFun) a,
         MonadError e m,
         MonadQuote m)
-    => TypeCheckConfig DefaultUni DefaultFun
-    -> Program TyName Name DefaultUni DefaultFun a
+    => TypeCheckConfig DefaultUni (CurVer DefaultFun)
+    -> Program TyName Name DefaultUni (CurVer DefaultFun) a
     -> m (Normalized (Type TyName DefaultUni ()))
 typecheckPipeline = inferTypeOfProgram
 format

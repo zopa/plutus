@@ -4,11 +4,14 @@
 {-# LANGUAGE TypeFamilies     #-}
 {-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE TypeSynonymInstances     #-}
+{-# LANGUAGE FlexibleInstances     #-}
 
 module Common
 where
 
 import PlutusCore
+import PlutusCore.Default
 import PlutusCore.Data
 import PlutusCore.Evaluation.Machine.ExMemory
 import PlutusCore.Evaluation.Machine.MachineParameters
@@ -22,6 +25,8 @@ import Criterion.Main
 import Data.ByteString qualified as BS
 import Data.Ix (Ix)
 import Data.Typeable (Typeable)
+import Data.Coerce
+import Data.Tagged
 
 type PlainTerm uni fun = UPLC.Term Name uni fun ()
 
@@ -85,8 +90,9 @@ benchWith params name term = bench name $ whnf (unsafeEvaluateCekNoEmit params) 
 -}
 
 benchDefault :: String -> PlainTerm DefaultUni DefaultFun -> Benchmark
-benchDefault = benchWith defaultCekParameters
+benchDefault s t = benchWith defaultCekParameters s (coerce @(PlainTerm DefaultUni DefaultFun) @(PlainTerm DefaultUni (CurVer DefaultFun)) t)
 
+deriving newtype instance Pretty fun => Pretty (CurVer fun)
 
 ---------------- Constructing Polymorphic PLC terms for benchmarking ----------------
 

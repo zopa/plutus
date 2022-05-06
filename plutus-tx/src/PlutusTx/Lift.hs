@@ -3,6 +3,9 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE TypeSynonymInstances     #-}
+{-# LANGUAGE FlexibleInstances     #-}
 module PlutusTx.Lift (
     makeLift,
     safeLift,
@@ -28,6 +31,7 @@ import PlutusIR.Compiler.Definitions
 import PlutusIR.Error qualified as PIR
 import PlutusIR.MkPir qualified as PIR
 
+import PlutusCore.Default
 import PlutusCore qualified as PLC
 import PlutusCore.Pretty (PrettyConst)
 import PlutusCore.Quote
@@ -125,7 +129,7 @@ liftProgram x = UPLC.Program () (PLC.defaultVersion ()) $ lift x
 -- | Get a Plutus Core program in the default universe corresponding to the given value, throwing any errors that occur as exceptions and ignoring fresh names.
 liftProgramDef
     :: Lift.Lift PLC.DefaultUni a
-    => a -> UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()
+    => a -> UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni (CurVer PLC.DefaultFun) ()
 liftProgramDef = liftProgram
 
 -- | Get a Plutus Core program corresponding to the given value as a 'CompiledCodeIn', throwing any errors that occur as exceptions and ignoring fresh names.
@@ -200,3 +204,5 @@ typeCode p prog@(PLC.Program _ _ term) = do
     let erased = UPLC.eraseProgram prog
     db <-  traverseOf UPLC.progTerm (\t -> UPLC.deBruijnTerm =<< UPLC.simplifyTerm UPLC.defaultSimplifyOpts t) erased
     pure $ DeserializedCode db Nothing mempty
+
+deriving newtype instance Pretty fun => Pretty (CurVer fun)

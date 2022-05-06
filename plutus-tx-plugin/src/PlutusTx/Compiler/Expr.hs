@@ -43,6 +43,7 @@ import PlutusIR.Core.Type (Term (..))
 import PlutusIR.MkPir qualified as PIR
 import PlutusIR.Purity qualified as PIR
 
+import PlutusCore.Default qualified as PLC
 import PlutusCore qualified as PLC
 import PlutusCore.MkPlc qualified as PLC
 import PlutusCore.Pretty qualified as PP
@@ -485,12 +486,12 @@ mkTrace
     :: (PLC.Contains uni T.Text)
     => PLC.Type PLC.TyName uni ()
     -> T.Text
-    -> PIRTerm uni PLC.DefaultFun
-    -> PIRTerm uni PLC.DefaultFun
+    -> PIRTerm uni (PLC.CurVer PLC.DefaultFun)
+    -> PIRTerm uni (PLC.CurVer PLC.DefaultFun)
 mkTrace ty str v =
     PLC.mkIterApp
         ()
-        (PIR.TyInst () (PIR.Builtin () PLC.Trace) ty)
+        (PIR.TyInst () (PIR.Builtin () $ PLC.Tagged PLC.Trace) ty)
         [PLC.mkConstant () str, v]
 
 -- `mkLazyTrace ty str v` builds the term `force (trace str (delay v))` if `v` has type `ty`
@@ -498,7 +499,7 @@ mkLazyTrace
     :: CompilingDefault uni fun m
     => PLC.Type PLC.TyName uni ()
     -> T.Text
-    -> PIRTerm uni PLC.DefaultFun
+    -> PIRTerm uni (PLC.CurVer PLC.DefaultFun)
     -> m (PIRTerm uni fun)
 mkLazyTrace ty str v = do
   delayedBody <- delay v
@@ -550,16 +551,16 @@ f = Identity (\x -> x)
 entryExitTracingInside ::
     PIR.Name
     -> T.Text
-    -> PIRTerm PLC.DefaultUni PLC.DefaultFun
+    -> PIRTerm PLC.DefaultUni (PLC.CurVer PLC.DefaultFun)
     -> PLC.Type PIR.TyName PLC.DefaultUni ()
-    -> PIRTerm PLC.DefaultUni PLC.DefaultFun
+    -> PIRTerm PLC.DefaultUni (PLC.CurVer PLC.DefaultFun)
 entryExitTracingInside lamName displayName = go mempty
     where
         go ::
             Map.Map PLC.TyName (PLCType PLC.DefaultUni)
-            -> PIRTerm PLC.DefaultUni PLC.DefaultFun
+            -> PIRTerm PLC.DefaultUni (PLC.CurVer PLC.DefaultFun)
             -> PLCType PLC.DefaultUni
-            -> PIRTerm PLC.DefaultUni PLC.DefaultFun
+            -> PIRTerm PLC.DefaultUni (PLC.CurVer PLC.DefaultFun)
         go subst (LamAbs () n t body) (PLC.TyFun () _dom cod) =
             -- when t = \x -> body, => \x -> entryExitTracingInside body
             LamAbs () n t $ go subst body cod
@@ -580,9 +581,9 @@ entryExitTracingInside lamName displayName = go mempty
 entryExitTracing ::
     PLC.Name
     -> T.Text
-    -> PIRTerm PLC.DefaultUni PLC.DefaultFun
+    -> PIRTerm PLC.DefaultUni (PLC.CurVer PLC.DefaultFun)
     -> PLC.Type PLC.TyName PLC.DefaultUni ()
-    -> PIRTerm PLC.DefaultUni PLC.DefaultFun
+    -> PIRTerm PLC.DefaultUni (PLC.CurVer PLC.DefaultFun)
 entryExitTracing lamName displayName e ty =
     let defaultUnitTy = PLC.TyBuiltin () (PLC.SomeTypeIn PLC.DefaultUniUnit)
         defaultUnit = PIR.Constant () (PLC.someValueOf PLC.DefaultUniUnit ())

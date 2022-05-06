@@ -172,7 +172,7 @@ type Compiling uni fun m =
 -- 'DefaultFun'.
 type CompilingDefault uni fun m =
     ( uni ~ PLC.DefaultUni
-    , fun ~ PLC.DefaultFun
+    , fun ~ PLC.CurVer PLC.DefaultFun
     , Compiling uni fun m
     )
 

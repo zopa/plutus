@@ -9,6 +9,8 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE TypeSynonymInstances     #-}
+{-# LANGUAGE FlexibleInstances     #-}
 
 module PlutusCore.Generators.Internal.TypeEvalCheck
     ( TypeEvalCheckError (..)
@@ -24,6 +26,7 @@ import PlutusCore.Generators.Internal.TypedBuiltinGen
 import PlutusCore.Generators.Internal.Utils
 
 import PlutusCore
+import PlutusCore.Default
 import PlutusCore.Builtin
 import PlutusCore.Evaluation.Machine.Ck
 import PlutusCore.Evaluation.Machine.Exception
@@ -90,7 +93,7 @@ type TypeEvalCheckM uni fun = Either (TypeEvalCheckError uni fun)
 -- See Note [Type-eval checking].
 -- | Type check and evaluate a term and check that the expected result is equal to the actual one.
 typeEvalCheckBy
-    :: ( uni ~ DefaultUni, fun ~ DefaultFun
+    :: ( uni ~ DefaultUni, fun ~ CurVer DefaultFun
        , KnownTypeAst uni a, MakeKnown (Term TyName Name uni fun ()) a
        , PrettyPlc internal
        )
@@ -119,7 +122,7 @@ typeEvalCheckBy eval (TermOf term (x :: a)) = TermOf term <$> do
 -- | Type check and evaluate a term and check that the expected result is equal to the actual one.
 -- Throw an error in case something goes wrong.
 unsafeTypeEvalCheck
-    :: ( uni ~ DefaultUni, fun ~ DefaultFun
+    :: ( uni ~ DefaultUni, fun ~ CurVer DefaultFun
        , KnownTypeAst uni a, MakeKnown (Term TyName Name uni fun ()) a
        )
     => TermOf (Term TyName Name uni fun ()) a
@@ -133,3 +136,5 @@ unsafeTypeEvalCheck termOfTbv = do
             , render . prettyPlcClassicDebug $ _termOfTerm termOfTbv
             ]
         Right termOfTecr -> _termCheckResultValue <$> termOfTecr
+
+deriving newtype instance Pretty fun => Pretty (CurVer fun)

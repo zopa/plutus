@@ -15,6 +15,7 @@ module Plutus.V1.Ledger.EvaluationContext
     , costModelParamNames
     ) where
 
+import PlutusCore.Default
 import PlutusCore as Plutus (DefaultFun, DefaultUni, UnliftingMode (..), defaultCekCostModel, defaultCostModelParams)
 import PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import PlutusCore.Evaluation.Machine.MachineParameters as Plutus
@@ -30,8 +31,9 @@ import Data.Text qualified as Text
 import GHC.Exts (inline)
 import GHC.Generics
 
+
 type DefaultMachineParameters =
-    Plutus.MachineParameters CekMachineCosts CekValue DefaultUni DefaultFun
+    Plutus.MachineParameters CekMachineCosts CekValue DefaultUni (CurVer DefaultFun)
 
 -- | An opaque type that contains all the static parameters that the evaluator needs to evaluate a
 -- script.  This is so that they can be computed once and cached, rather than recomputed on every

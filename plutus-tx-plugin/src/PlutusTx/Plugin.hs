@@ -8,6 +8,8 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE TypeSynonymInstances               #-}
+{-# LANGUAGE FlexibleInstances               #-}
 -- For some reason this module is very slow to compile otherwise
 {-# OPTIONS_GHC -O0 #-}
 module PlutusTx.Plugin (plugin, plc) where
@@ -29,6 +31,7 @@ import GhcPlugins qualified as GHC
 import OccurAnal qualified as GHC
 import Panic qualified as GHC
 
+import PlutusCore.Default qualified as PLC
 import PlutusCore qualified as PLC
 import PlutusCore.Pretty as PLC
 import PlutusCore.Quote
@@ -248,7 +251,7 @@ runPluginM pctx act = do
             in liftIO $ GHC.throwGhcExceptionIO errInGhc
 
 -- | Compiles all the marked expressions in the given binder into PLC literals.
-compileBind :: GHC.CoreBind -> PluginM PLC.DefaultUni PLC.DefaultFun GHC.CoreBind
+compileBind :: GHC.CoreBind -> PluginM PLC.DefaultUni (PLC.CurVer PLC.DefaultFun) GHC.CoreBind
 compileBind = \case
     GHC.NonRec b rhs -> GHC.NonRec b <$> compileMarkedExprs rhs
     GHC.Rec bindsRhses -> GHC.Rec <$> (for bindsRhses $ \(b, rhs) -> do
@@ -275,7 +278,7 @@ with this, since you can't really specify a polymorphic type in a type applicati
 -}
 
 -- | Compiles all the core-expressions surrounded by plc in the given expression into PLC literals.
-compileMarkedExprs :: GHC.CoreExpr -> PluginM PLC.DefaultUni PLC.DefaultFun GHC.CoreExpr
+compileMarkedExprs :: GHC.CoreExpr -> PluginM PLC.DefaultUni (PLC.CurVer PLC.DefaultFun) GHC.CoreExpr
 compileMarkedExprs expr = do
     markerName <- asks pcMarkerName
     case expr of
@@ -311,7 +314,7 @@ compileMarkedExprs expr = do
 -- if a compilation error happens and the 'defer-errors' option is turned on,
 -- the compilation error is suppressed and the original hs expression is replaced with a
 -- haskell runtime-error expression.
-compileMarkedExprOrDefer :: String -> GHC.Type -> GHC.CoreExpr -> PluginM PLC.DefaultUni PLC.DefaultFun GHC.CoreExpr
+compileMarkedExprOrDefer :: String -> GHC.Type -> GHC.CoreExpr -> PluginM PLC.DefaultUni (PLC.CurVer PLC.DefaultFun) GHC.CoreExpr
 compileMarkedExprOrDefer locStr codeTy origE = do
     opts <- asks pcOpts
     let compileAct = compileMarkedExpr locStr codeTy origE
@@ -334,7 +337,7 @@ emitRuntimeError codeTy e = do
 -- | Compile the core expression that is surrounded by a 'plc' marker,
 -- and return a core expression which evaluates to the compiled plc AST as a serialized bytestring,
 -- to be injected back to the Haskell program.
-compileMarkedExpr :: String -> GHC.Type -> GHC.CoreExpr -> PluginM PLC.DefaultUni PLC.DefaultFun GHC.CoreExpr
+compileMarkedExpr :: String -> GHC.Type -> GHC.CoreExpr -> PluginM PLC.DefaultUni (PLC.CurVer PLC.DefaultFun) GHC.CoreExpr
 compileMarkedExpr locStr codeTy origE = do
     flags <- GHC.getDynFlags
     famEnvs <- asks pcFamEnvs
@@ -377,7 +380,7 @@ compileMarkedExpr locStr codeTy origE = do
 -- | The GHC.Core to PIR to PLC compiler pipeline. Returns both the PIR and PLC output.
 -- It invokes the whole compiler chain:  Core expr -> PIR expr -> PLC expr -> UPLC expr.
 runCompiler
-    :: forall uni fun m . (uni ~ PLC.DefaultUni, fun ~ PLC.DefaultFun, MonadReader (CompileContext uni fun) m, MonadWriter CoverageIndex m, MonadQuote m, MonadError (CompileError uni fun) m, MonadIO m)
+    :: forall uni fun m . (uni ~ PLC.DefaultUni, fun ~ PLC.CurVer PLC.DefaultFun, MonadReader (CompileContext uni fun) m, MonadWriter CoverageIndex m, MonadQuote m, MonadError (CompileError uni fun) m, MonadIO m)
     => String
     -> PluginOptions
     -> GHC.CoreExpr
@@ -443,7 +446,7 @@ runCompiler moduleName opts expr = do
 
   where
       -- ugly trick to take out the concrete plc.error and in case of error, map it / rethrow it using our 'CompileError'
-      liftExcept :: ExceptT (PLC.Error PLC.DefaultUni PLC.DefaultFun ()) m b -> m b
+      liftExcept :: ExceptT (PLC.Error PLC.DefaultUni fun ()) m b -> m b
       liftExcept act = do
         plcTcError <- runExceptT act
         -- also wrap the PLC Error annotations into Original provenances, to match our expected 'CompileError'
@@ -512,3 +515,7 @@ makePrimitiveNameInfo names = do
         thing <- lift . lift $ GHC.lookupThing ghcName
         pure (name, thing)
     pure $ Map.fromList infos
+
+
+deriving newtype instance Pretty fun => Pretty (PLC.CurVer fun)
+deriving newtype instance Flat fun => Flat (PLC.CurVer fun)

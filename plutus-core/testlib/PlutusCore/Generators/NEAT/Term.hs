@@ -137,7 +137,7 @@ data TermG tyname name
       (TypeG tyname)
       (Kind ())
     | ConstantG TermConstantG
-    | BuiltinG DefaultFun
+    | BuiltinG (CurVer DefaultFun)
     | WrapG (TermG tyname name)
     | UnWrapG (TypeG tyname) (Kind ()) (TypeG tyname) (TermG tyname name)
     | ErrorG (TypeG tyname)
@@ -257,7 +257,7 @@ convertTerm tns ns _ (TyInstG tm cod ty k) =
   TyInst () <$> convertTerm tns ns (TyForallG k cod) tm <*> convertType tns k ty
 convertTerm _tns _ns _ (ConstantG c) =
   return $ Constant () (convertTermConstant c)
-convertTerm _tns _ns _ (BuiltinG b) = return $ Builtin () b
+convertTerm _tns _ns _ (BuiltinG (Tagged b)) = return $ Builtin () b
 convertTerm tns ns (TyIFixG ty1 k ty2) (WrapG tm) = IWrap () <$> convertType tns k' ty1 <*> convertType tns k ty2 <*> convertTerm tns ns (normalizeTypeG ty') tm
   where
   k'  = KindArrow () (KindArrow () k (Type ())) (KindArrow () k (Type ()))
