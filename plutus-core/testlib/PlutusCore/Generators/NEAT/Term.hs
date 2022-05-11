@@ -17,7 +17,7 @@ This file contains
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TypeApplications          #-}
-
+{-# LANGUAGE TypeSynonymInstances          #-}
 
 module PlutusCore.Generators.NEAT.Term
   ( TypeBuiltinG (..)
@@ -49,6 +49,7 @@ import PlutusCore.Data
 import PlutusCore.Default
 import PlutusCore.Generators.NEAT.Common
 import Text.Printf
+import Data.Coerce
 
 import PlutusCore.Generators.NEAT.Type
 
@@ -120,6 +121,10 @@ deriveEnumerable ''TermConstantG
 
 deriveEnumerable ''DefaultFun
 
+instance Enumerable VCurrentDefaultFun where
+    enumerate = datatype [c1 Tagged]
+
+
 data TermG tyname name
     = VarG
       name
@@ -137,7 +142,7 @@ data TermG tyname name
       (TypeG tyname)
       (Kind ())
     | ConstantG TermConstantG
-    | BuiltinG DefaultFun
+    | BuiltinG VCurrentDefaultFun
     | WrapG (TermG tyname name)
     | UnWrapG (TypeG tyname) (Kind ()) (TypeG tyname) (TermG tyname name)
     | ErrorG (TypeG tyname)
@@ -241,7 +246,7 @@ convertTerm
   -> NameState name     -- ^ Name environment with fresh name stream
   -> TypeG tyname       -- ^ Type of term below
   -> TermG tyname name  -- ^ Term to convert
-  -> m (Term TyName Name DefaultUni DefaultFun ())
+  -> m (Term TyName Name DefaultUni VCurrentDefaultFun ())
 convertTerm _tns ns _ty (VarG i) =
   return (Var () (nameOf ns i))
 convertTerm tns ns (TyFunG ty1 ty2) (LamAbsG tm) = do
@@ -274,7 +279,7 @@ convertClosedTerm
   -> Stream.Stream Text.Text
   -> ClosedTypeG
   -> ClosedTermG
-  -> m (Term TyName Name DefaultUni DefaultFun ())
+  -> m (Term TyName Name DefaultUni VCurrentDefaultFun ())
 convertClosedTerm tynames names = convertTerm (emptyTyNameState tynames) (emptyNameState names)
 
 
@@ -426,9 +431,9 @@ defaultFunTypes = Map.fromList [(TyFunG (TyBuiltinG TyIntegerG) (TyFunG (TyBuilt
                   ,[UnBData, SerialiseData])
                   ]
 
-instance Ord tyname => Check (TypeG tyname) DefaultFun where
+instance Ord tyname => Check (TypeG tyname) VCurrentDefaultFun where
   check ty b = case Map.lookup ty defaultFunTypes of
-    Just bs -> toCool $ elem b bs
+    Just bs -> toCool $ elem b (coerce @_ @[VCurrentDefaultFun] bs)
     Nothing -> false
 
 -- it's not clear to me whether this function should insist that some

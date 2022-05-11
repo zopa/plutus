@@ -125,7 +125,7 @@ liftProgram x = UPLC.Program () (PLC.defaultVersion ()) $ lift x
 -- | Get a Plutus Core program in the default universe corresponding to the given value, throwing any errors that occur as exceptions and ignoring fresh names.
 liftProgramDef
     :: Lift.Lift PLC.DefaultUni a
-    => a -> UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()
+    => a -> UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.VCurrentDefaultFun ()
 liftProgramDef = liftProgram
 
 -- | Get a Plutus Core program corresponding to the given value as a 'CompiledCodeIn', throwing any errors that occur as exceptions and ignoring fresh names.

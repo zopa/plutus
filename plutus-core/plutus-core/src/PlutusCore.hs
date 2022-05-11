@@ -2,6 +2,8 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies    #-}
 
 module PlutusCore
     (
@@ -38,6 +40,10 @@ module PlutusCore
     , pattern DefaultUniList
     , pattern DefaultUniPair
     , DefaultFun (..)
+    , DefaultFunVersion (..)
+    , VCurrentDefaultFun
+    , V1DefaultFun
+    , V2DefaultFun
     -- * AST
     , Term (..)
     , termSubterms
@@ -127,13 +133,15 @@ module PlutusCore
     , serialisedSize
     -- * Budgeting defaults
     , defaultBuiltinCostModel
-    , defaultBuiltinsRuntime
+    , vdefaultBuiltinsRuntime
     , defaultCekCostModel
     , defaultCekMachineCosts
-    , defaultCekParameters
+    , vdefaultCekParameters
+    , v1CekParameters
+    , v2CekParameters
     , defaultCostModelParams
     , defaultUnliftingMode
-    , unitCekParameters
+    , vunitCekParameters
     -- * CEK machine costs
     , cekMachineCostsPrefix
     , CekMachineCosts (..)
@@ -168,14 +176,16 @@ import Text.Megaparsec (SourcePos, initialPos)
 topSourcePos :: SourcePos
 topSourcePos = initialPos "top"
 
-printType ::(AsParserErrorBundle e, AsUniqueError e SourcePos, AsTypeError e (Term TyName Name DefaultUni DefaultFun ()) DefaultUni DefaultFun SourcePos,
-        MonadError e m)
+printType ::(fun ~ VCurrentDefaultFun
+           , AsParserErrorBundle e, AsUniqueError e SourcePos
+           , AsTypeError e (Term TyName Name DefaultUni fun ()) DefaultUni fun SourcePos
+           , MonadError e m)
     => T.Text
     -> m T.Text
 printType txt = runQuoteT $ T.pack . show . pretty <$> do
     scoped <- parseScoped txt
     config <- getDefTypeCheckConfig topSourcePos
-    inferTypeOfProgram config scoped
+    inferTypeOfProgram config $ coerce scoped
 
 -- | Parse and rewrite so that names are globally unique, not just unique within
 -- their scope.
@@ -189,13 +199,14 @@ parseScoped = through (Uniques.checkProgram (const True)) <=< rename <=< parsePr
 
 -- | Typecheck a program.
 typecheckPipeline
-    :: (AsTypeError e (Term TyName Name DefaultUni DefaultFun ()) DefaultUni DefaultFun a,
+    :: (AsTypeError e (Term TyName Name DefaultUni VCurrentDefaultFun ()) DefaultUni VCurrentDefaultFun a,
         MonadError e m,
         MonadQuote m)
-    => TypeCheckConfig DefaultUni DefaultFun
-    -> Program TyName Name DefaultUni DefaultFun a
+    => TypeCheckConfig DefaultUni VCurrentDefaultFun
+    -> Program TyName Name DefaultUni VCurrentDefaultFun a
     -> m (Normalized (Type TyName DefaultUni ()))
 typecheckPipeline = inferTypeOfProgram
+
 format
     :: (AsParserErrorBundle e, MonadError e m)
     => PrettyConfigPlc -> T.Text -> m T.Text

@@ -14,7 +14,6 @@ import TransformSpec
 import TypeSpec
 
 import PlutusIR
-import PlutusIR.Parser (pTerm)
 import PlutusIR.Test
 
 import PlutusCore qualified as PLC
@@ -44,45 +43,45 @@ tests = testGroup "plutus-ir" <$> sequence
 
 prettyprinting :: TestNested
 prettyprinting = testNested "prettyprinting"
-    $ map (goldenPir id pTerm)
+    $ map (goldenPir id)
     [ "basic"
     , "maybe"
     ]
 
 lets :: TestNested
 lets = testNested "lets"
-    [ goldenPlcFromPir pTerm "letInLet"
-    , goldenPlcFromPir pTerm "letDep"
+    [ goldenPlcFromPir "letInLet"
+    , goldenPlcFromPir "letDep"
     ]
 
 datatypes :: TestNested
 datatypes = testNested "datatypes"
-    [ goldenPlcFromPir pTerm "maybe"
-    , goldenPlcFromPir pTerm "listMatch"
-    , goldenPlcFromPirCatch pTerm "idleAll"
-    , goldenPlcFromPirCatch pTerm "some"
-    , goldenEvalPir pTerm "listMatchEval"
+    [ goldenPlcFromPir "maybe"
+    , goldenPlcFromPir "listMatch"
+    , goldenPlcFromPirCatch "idleAll"
+    , goldenPlcFromPirCatch "some"
+    , goldenEvalPir "listMatchEval"
     ]
 
 recursion :: TestNested
 recursion = testNested "recursion"
-    [ goldenPlcFromPir pTerm "even3"
-    , goldenEvalPir pTerm "even3Eval"
-    , goldenPlcFromPir pTerm "stupidZero"
-    , goldenPlcFromPir pTerm "mutuallyRecursiveValues"
-    , goldenEvalPir pTerm "errorBinding"
+    [ goldenPlcFromPir "even3"
+    , goldenEvalPir "even3Eval"
+    , goldenPlcFromPir "stupidZero"
+    , goldenPlcFromPir "mutuallyRecursiveValues"
+    , goldenEvalPir "errorBinding"
     ]
 
 serialization :: TestNested
 serialization = testNested "serialization"
-    $ map (goldenPir roundTripPirTerm pTerm)
+    $ map (goldenPir roundTripPirTerm)
     [ "serializeBasic"
     , "serializeMaybePirTerm"
     , "serializeEvenOdd"
     , "serializeListMatch"
     ]
 
-roundTripPirTerm :: Term TyName Name PLC.DefaultUni PLC.DefaultFun a -> Term TyName Name PLC.DefaultUni PLC.DefaultFun ()
+roundTripPirTerm :: Term TyName Name PLC.DefaultUni PLC.VCurrentDefaultFun a -> Term TyName Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 roundTripPirTerm = decodeOrError . unflat . flat . void
   where
     decodeOrError (Right tm) = tm
@@ -90,6 +89,6 @@ roundTripPirTerm = decodeOrError . unflat . flat . void
 
 errors :: TestNested
 errors = testNested "errors"
-    [ goldenPlcFromPirCatch pTerm "mutuallyRecursiveTypes"
-    , goldenPlcFromPirCatch pTerm "recursiveTypeBind"
+    [ goldenPlcFromPirCatch "mutuallyRecursiveTypes"
+    , goldenPlcFromPirCatch "recursiveTypeBind"
     ]

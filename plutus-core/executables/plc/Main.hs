@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase   #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Main (main) where
 
@@ -8,11 +9,13 @@ import Parsers
 import PlutusCore qualified as PLC
 import PlutusCore.Evaluation.Machine.Ck qualified as Ck
 import PlutusCore.Pretty qualified as PP
+import PlutusCore.Default
 
 import UntypedPlutusCore qualified as UPLC (eraseProgram)
 
 import Data.Functor (void)
 import Data.Text.IO qualified as T
+import Data.Coerce
 
 import Control.DeepSeq (rnf)
 import Control.Lens
@@ -113,12 +116,12 @@ runApply (ApplyOptions inputfiles ifmt outp ofmt mode) = do
 
 runTypecheck :: TypecheckOptions -> IO ()
 runTypecheck (TypecheckOptions inp fmt) = do
-  prog <- getProgram fmt inp
+  prog <- coerce @(PlcProg PLC.SourcePos) @(PLC.Program PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun PLC.SourcePos) <$> getProgram fmt inp
   case PLC.runQuoteT $ do
     tcConfig <- PLC.getDefTypeCheckConfig ()
     PLC.typecheckPipeline tcConfig (void prog)
     of
-      Left (e :: PLC.Error PLC.DefaultUni PLC.DefaultFun ()) ->
+      Left (e :: PLC.Error PLC.DefaultUni PLC.VCurrentDefaultFun ()) ->
         errorWithoutStackTrace $ PP.displayPlcDef e
       Right ty                                               ->
         T.putStrLn (PP.displayPlcDef ty) >> exitSuccess
@@ -127,8 +130,8 @@ runTypecheck (TypecheckOptions inp fmt) = do
 
 runEval :: EvalOptions -> IO ()
 runEval (EvalOptions inp ifmt printMode timingMode) = do
-  prog <- getProgram ifmt inp
-  let evaluate = Ck.evaluateCkNoEmit PLC.defaultBuiltinsRuntime
+  prog <- coerce @(PlcProg PLC.SourcePos) @(PLC.Program PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun PLC.SourcePos) <$>  getProgram ifmt inp
+  let evaluate = Ck.evaluateCkNoEmit PLC.vdefaultBuiltinsRuntime
       term = void $ prog ^. PLC.progTerm
       !_ = rnf term
       -- Force evaluation of body to ensure that we're not timing parsing/deserialisation.

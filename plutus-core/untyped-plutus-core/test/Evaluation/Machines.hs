@@ -35,7 +35,7 @@ import Test.Tasty.Extras
 import Test.Tasty.Hedgehog
 
 testMachine
-    :: (uni ~ DefaultUni, fun ~ DefaultFun, PrettyPlc internal)
+    :: (uni ~ DefaultUni, fun ~ VCurrentDefaultFun, PrettyPlc internal)
     => String
     -> (Term Name uni fun () ->
            Either (EvaluationException user internal (Term Name uni fun ())) (Term Name uni fun ()))
@@ -44,7 +44,7 @@ testMachine machine eval =
     testGroup machine $ fromInterestingTermGens $ \name genTermOfTbv ->
         testProperty name . withTests 200 . property $ do
             TermOf term val <- forAllWith mempty genTermOfTbv
-            let resExp = erase <$> makeKnownOrFail @_ @(Plc.Term TyName Name DefaultUni DefaultFun ()) val
+            let resExp = erase <$> makeKnownOrFail @_ @(Plc.Term TyName Name DefaultUni VCurrentDefaultFun ()) val
             case extractEvaluationResult . eval $ erase term of
                 Left err     -> fail $ show err
                 Right resAct -> resAct === resExp
@@ -52,7 +52,7 @@ testMachine machine eval =
 test_machines :: TestTree
 test_machines =
     testGroup "machines"
-        [ testMachine "CEK"  $ evaluateCekNoEmit Plc.defaultCekParameters
+        [ testMachine "CEK"  $ evaluateCekNoEmit Plc.vdefaultCekParameters
         ]
 
 testBudget
@@ -67,7 +67,7 @@ testBudget runtime name term =
     (renderStrict $ layoutPretty defaultLayoutOptions {layoutPageWidth = AvailablePerLine maxBound 1.0} $
         prettyPlcReadableDef $ runCekNoEmit (MachineParameters Plc.defaultCekMachineCosts runtime) Cek.tallying term)
 
-bunchOfFibs :: PlcFolderContents DefaultUni DefaultFun
+bunchOfFibs :: PlcFolderContents DefaultUni VCurrentDefaultFun
 bunchOfFibs = FolderContents [treeFolderContents "Fib" $ map fibFile [1..3]] where
     fibFile i = plcTermFile (show i) (naiveFib i)
 
@@ -89,10 +89,10 @@ bunchOfIdNats =
             idN' = apply () (tyInst () (builtin () Id) $ Plc.TyFun () Plc.natTy Plc.natTy) idN
 
 -- | Same as 'bunchOfIdNats' except uses the built-in @ifThenElse@.
-bunchOfIfThenElseNats :: PlcFolderContents DefaultUni DefaultFun
+bunchOfIfThenElseNats :: PlcFolderContents DefaultUni VCurrentDefaultFun
 bunchOfIfThenElseNats =
     FolderContents [treeFolderContents "IfThenElse" $ map ifThenElseNatFile [0 :: Int, 1.. 5]] where
-        ifThenElseNatFile i = plcTermFile (show i) (ifThenElseNat id0 i) where
+        ifThenElseNatFile i = plcTermFile (show i) (ifThenElseNat id0 i)
         -- > id0 = foldNat {nat} succ zero
         id0 = mkIterApp () (tyInst () Plc.foldNat $ Plc.natTy) [Plc.succ, Plc.zero]
 
@@ -104,7 +104,7 @@ bunchOfIfThenElseNats =
             idN'
 
                 = etaExpand Plc.natTy
-                $ mkIterApp () (tyInst () (builtin () IfThenElse) $ Plc.TyFun () Plc.natTy Plc.natTy)
+                $ mkIterApp () (tyInst () (builtin () (Tagged IfThenElse :: VCurrentDefaultFun)) $ Plc.TyFun () Plc.natTy Plc.natTy)
                     [mkConstant () $ even n, idN, idN]
 
 test_budget :: TestTree
@@ -112,9 +112,9 @@ test_budget
     = runTestNestedIn ["untyped-plutus-core", "test", "Evaluation", "Machines"]
     . testNested "Budget"
     $ concat
-        [ folder Plc.defaultBuiltinsRuntime bunchOfFibs
+        [ folder Plc.vdefaultBuiltinsRuntime bunchOfFibs
         , folder (toBuiltinsRuntime Plc.defaultUnliftingMode ()) bunchOfIdNats
-        , folder Plc.defaultBuiltinsRuntime bunchOfIfThenElseNats
+        , folder Plc.vdefaultBuiltinsRuntime bunchOfIfThenElseNats
         ]
   where
     folder runtime =
@@ -123,12 +123,12 @@ test_budget
             (\name _ -> pure $ testGroup name [])
             (\name -> testBudget runtime name . erase)
 
-testTallying :: TestName -> Term Name DefaultUni DefaultFun () -> TestNested
+testTallying :: TestName -> Term Name DefaultUni VCurrentDefaultFun () -> TestNested
 testTallying name term =
                        nestedGoldenVsText
     name
     (renderStrict $ layoutPretty defaultLayoutOptions {layoutPageWidth = AvailablePerLine maxBound 1.0} $
-        prettyPlcReadableDef $ runCekNoEmit Plc.defaultCekParameters Cek.tallying term)
+        prettyPlcReadableDef $ runCekNoEmit Plc.vdefaultCekParameters Cek.tallying term)
 
 test_tallying :: TestTree
 test_tallying =

@@ -6,6 +6,7 @@ module UntypedPlutusCore (
     , parseScoped
     , PLC.DefaultUni
     , PLC.DefaultFun
+    , PLC.VCurrentDefaultFun
     ) where
 
 import UntypedPlutusCore.Core as Export

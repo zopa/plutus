@@ -3,15 +3,17 @@
 {-# LANGUAGE TypeFamilies    #-}
 
 module PlutusCore.Evaluation.Machine.ExBudgetingDefaults
-    ( defaultBuiltinsRuntime
+    ( vdefaultBuiltinsRuntime
     , defaultCekCostModel
     , defaultCekMachineCosts
-    , defaultCekParameters
+    , vdefaultCekParameters
     , defaultCostModelParams
     , defaultUnliftingMode
     , defaultBuiltinCostModel
     , unitCekMachineCosts
-    , unitCekParameters
+    , vunitCekParameters
+    , v1CekParameters
+    , v2CekParameters
     )
 
 where
@@ -78,17 +80,22 @@ defaultCostModelParams = extractCostModelParams defaultCekCostModel
 defaultUnliftingMode :: UnliftingMode
 defaultUnliftingMode = UnliftingImmediate
 
-defaultCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni DefaultFun
-defaultCekParameters = mkMachineParameters defaultUnliftingMode defaultCekCostModel
+vdefaultCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni VCurrentDefaultFun
+vdefaultCekParameters = mkMachineParameters defaultUnliftingMode defaultCekCostModel
 
-unitCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni DefaultFun
-unitCekParameters =
+v1CekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni V1DefaultFun
+v1CekParameters = mkMachineParameters defaultUnliftingMode defaultCekCostModel
+
+v2CekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni V2DefaultFun
+v2CekParameters = mkMachineParameters defaultUnliftingMode defaultCekCostModel
+
+vunitCekParameters :: MachineParameters CekMachineCosts CekValue DefaultUni VCurrentDefaultFun
+vunitCekParameters =
     mkMachineParameters defaultUnliftingMode $
         CostModel unitCekMachineCosts unitCostBuiltinCostModel
 
-defaultBuiltinsRuntime :: HasConstantIn DefaultUni term => BuiltinsRuntime DefaultFun term
-defaultBuiltinsRuntime = toBuiltinsRuntime defaultUnliftingMode defaultBuiltinCostModel
-
+vdefaultBuiltinsRuntime :: HasConstantIn DefaultUni term => BuiltinsRuntime VCurrentDefaultFun term
+vdefaultBuiltinsRuntime = toBuiltinsRuntime defaultUnliftingMode defaultBuiltinCostModel
 
 -- A cost model with unit costs, so we can count how often each builtin is called
 

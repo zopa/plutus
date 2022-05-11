@@ -44,9 +44,13 @@ import Hedgehog hiding (Size, Var)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Type.Reflection
+import Data.Coerce
 
 -- | The type of terms-and-their-values generators.
-type TermGen a = Gen (TermOf (Term TyName Name DefaultUni DefaultFun ()) a)
+type TermGen a = Gen (TermOf (Term TyName Name DefaultUni VCurrentDefaultFun ()) a)
+
+tagAST :: Term tyname name uni DefaultFun ann -> Term tyname name uni VCurrentDefaultFun ann
+tagAST = coerce
 
 -- | Generates application of a builtin that returns a function, immediately saturated afterwards.
 --
@@ -58,7 +62,7 @@ genOverapplication = do
         integer = toTypeAst typedInteger
     TermOf ti i <- genTypedBuiltinDef typedInteger
     TermOf tj j <- genTypedBuiltinDef typedInteger
-    let term =
+    let term = tagAST $
             mkIterApp ()
                 (TyInst () (Builtin () IfThenElse) . TyFun () integer $ TyFun () integer integer)
                 [ mkIterApp () (Builtin () LessThanInteger) [ti, tj]
@@ -96,8 +100,8 @@ factorial = runQuote $ do
 -- >                         (rec (subtractInteger i 1))
 -- >                         (rec (subtractInteger i 2)))
 -- >         i0
-naiveFib :: Integer -> Term TyName Name DefaultUni DefaultFun ()
-naiveFib iv = runQuote $ do
+naiveFib :: Integer -> Term TyName Name DefaultUni VCurrentDefaultFun ()
+naiveFib iv = tagAST . runQuote $ do
     i0  <- freshName "i0"
     rec <- freshName "rec"
     i   <- freshName "i"
@@ -129,7 +133,7 @@ genFactorial :: TermGen Integer
 genFactorial = do
     let m = 10
     iv <- Gen.integral $ Range.linear 1 m
-    let term = Apply () factorial (mkConstant @Integer () iv)
+    let term = tagAST $  Apply () factorial (mkConstant @Integer () iv)
     return . TermOf term $ Prelude.product [1..iv]
 
 -- | Generate a term that computes the ith Fibonacci number and return it
@@ -150,18 +154,18 @@ genNatRoundtrip = do
     let typedInt = typeRep
     TermOf _ iv <- Gen.filter ((>= 0) . _termOfValue) $
         genTypedBuiltinDef @(Term TyName Name DefaultUni DefaultFun ()) typedInt
-    let term = apply () natToInteger $ metaIntegerToNat iv
+    let term = tagAST $ apply () natToInteger $ metaIntegerToNat iv
     return $ TermOf term iv
 
 -- | @sumNat@ as a PLC term.
-natSum :: Term TyName Name DefaultUni DefaultFun ()
+natSum :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 natSum = runQuote $ do
     let int = mkTyBuiltin @_ @Integer ()
         nat = _recursiveType natData
         add = Builtin () AddInteger
     acc <- freshName "acc"
     n <- freshName "n"
-    return
+    return . tagAST
         $ mkIterApp () (mkIterInst () foldList [nat, int])
           [   LamAbs () acc int
             . LamAbs () n nat
@@ -180,7 +184,7 @@ genScottListSum = do
         intS = toTypeAst typedInt
     ps <- Gen.list (Range.linear 0 10) $ genTypedBuiltinDef typedInt
     let list = metaListToScottList intS $ Prelude.map _termOfTerm ps
-        term = apply () ScottList.sum list
+        term = tagAST $ apply () ScottList.sum list
     let haskSum = Prelude.sum $ Prelude.map _termOfValue ps
     return $ TermOf term haskSum
 
@@ -195,7 +199,7 @@ genIfIntegers = do
     TermOf j jv <- genTermLoose typedInt
     let instConst = Apply () $ mkIterInst () Function.const [int, unit]
         value = if bv then iv else jv
-        term =
+        term = tagAST $
             mkIterApp ()
                 (TyInst () ifThenElse int)
                 [b, instConst i, instConst j]
@@ -208,7 +212,7 @@ genApplyAdd1 = do
         int = toTypeAst typedInt
     TermOf i iv <- genTermLoose typedInt
     TermOf j jv <- genTermLoose typedInt
-    let term =
+    let term = tagAST $
             mkIterApp () (mkIterInst () applyFun [int, int])
                 [ Apply () (Builtin () AddInteger) i
                 , j
@@ -222,7 +226,7 @@ genApplyAdd2 = do
         int = toTypeAst typedInt
     TermOf i iv <- genTermLoose typedInt
     TermOf j jv <- genTermLoose typedInt
-    let term =
+    let term = tagAST $
             mkIterApp () (mkIterInst () applyFun [int, TyFun () int int])
                 [ Builtin () AddInteger
                 , i
@@ -235,7 +239,7 @@ genDivideByZero :: TermGen (EvaluationResult Integer)
 genDivideByZero = do
     op <- Gen.element [DivideInteger, QuotientInteger, ModInteger, RemainderInteger]
     TermOf i _ <- genTermLoose $ typeRep @Integer
-    let term = mkIterApp () (Builtin () op) [i, mkConstant @Integer () 0]
+    let term = tagAST $ mkIterApp () (Builtin () op) [i, mkConstant @Integer () 0]
     return $ TermOf term EvaluationFailure
 
 -- | Check that division by zero results in 'Error' even if a function doesn't use that argument.
@@ -245,7 +249,7 @@ genDivideByZeroDrop = do
     let typedInt = typeRep
         int = toTypeAst typedInt
     TermOf i iv <- genTermLoose typedInt
-    let term =
+    let term = tagAST $
             mkIterApp () (mkIterInst () Function.const [int, int])
                 [ mkConstant @Integer () iv
                 , mkIterApp () (Builtin () op) [i, mkConstant @Integer () 0]
@@ -254,7 +258,7 @@ genDivideByZeroDrop = do
 
 -- | Apply a function to all interesting generators and collect the results.
 fromInterestingTermGens
-    :: (forall a. KnownType (Term TyName Name DefaultUni DefaultFun ()) a => String -> TermGen a -> c)
+    :: (forall a. KnownType (Term TyName Name DefaultUni VCurrentDefaultFun ()) a => String -> TermGen a -> c)
     -> [c]
 fromInterestingTermGens f =
     [ f "overapplication"  genOverapplication

@@ -47,6 +47,8 @@ import Control.Monad.Reader (MonadReader (ask))
 import Data.ByteString qualified as BS
 import Data.Proxy
 import Data.Text (Text)
+import Data.Coerce
+import PlutusCore.Default
 
 {- Note [Mapping builtins]
 We want the user to be able to call the Plutus builtins as normal Haskell functions.
@@ -149,8 +151,8 @@ Fortunately, we have a more sophisticated purity check that also detects unsatur
 which handles these cases too.
 -}
 
-mkBuiltin :: fun -> PIR.Term tyname name uni fun ()
-mkBuiltin = PIR.Builtin ()
+mkBuiltin :: Coercible fun fun' => fun -> PIR.Term tyname name uni fun' ()
+mkBuiltin = PIR.Builtin () . coerce
 
 -- | The 'TH.Name's for which 'NameInfo' needs to be provided.
 builtinNames :: [TH.Name]

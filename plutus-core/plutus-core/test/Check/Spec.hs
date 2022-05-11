@@ -87,7 +87,7 @@ propRenameCheck = property $ do
     annotateShow $ ShowPretty renamed
     Hedgehog.evalExceptT $ checkUniques renamed
         where
-            checkUniques :: (Ord a, MonadError (UniqueError a) m) => Program TyName Name uni fun a -> m ()
+            checkUniques :: (Ord a, MonadError (UniqueError a) m) => Program TyName Name uni DefaultFun a -> m ()
             -- the renamer will fix incoherency between *bound* variables, but it ignores free variables, so
             -- we can still get incoherent usage errors, ignore them for now
             checkUniques = Uniques.checkProgram (\case { FreeVariable{} -> False; IncoherentUsage {} -> False; _ -> True})

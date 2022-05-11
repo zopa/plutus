@@ -30,13 +30,13 @@ import Data.Text (Text)
 -- | Convert a Haskell value to a PLC term and then convert back to a Haskell value
 -- of a different type.
 readMakeHetero
-    :: ( MakeKnown (TPLC.Term TyName Name DefaultUni DefaultFun ()) a
-       , ReadKnown (UPLC.Term Name DefaultUni DefaultFun ()) b
+    :: ( MakeKnown (TPLC.Term TyName Name DefaultUni VCurrentDefaultFun ()) a
+       , ReadKnown (UPLC.Term Name DefaultUni VCurrentDefaultFun ()) b
        )
     => a -> EvaluationResult b
 readMakeHetero x = do
-    xTerm <- makeKnownOrFail @_ @(TPLC.Term TyName Name DefaultUni DefaultFun ()) x
-    case extractEvaluationResult <$> typecheckReadKnownCek TPLC.defaultCekParameters xTerm of
+    xTerm <- makeKnownOrFail @_ @(TPLC.Term TyName Name DefaultUni VCurrentDefaultFun ()) x
+    case extractEvaluationResult <$> typecheckReadKnownCek TPLC.vdefaultCekParameters xTerm of
         Left err          -> error $ "Type error" ++ displayPlcCondensedErrorClassic err
         Right (Left err)  -> error $ "Evaluation error: " ++ show err
         Right (Right res) -> res
@@ -44,15 +44,15 @@ readMakeHetero x = do
 -- | Convert a Haskell value to a PLC term and then convert back to a Haskell value
 -- of the same type.
 readMake
-    :: ( MakeKnown (TPLC.Term TyName Name DefaultUni DefaultFun ()) a
-       , ReadKnown (UPLC.Term Name DefaultUni DefaultFun ()) a
+    :: ( MakeKnown (TPLC.Term TyName Name DefaultUni VCurrentDefaultFun ()) a
+       , ReadKnown (UPLC.Term Name DefaultUni VCurrentDefaultFun ()) a
        )
     => a -> EvaluationResult a
 readMake = readMakeHetero
 
 builtinRoundtrip
-    :: ( MakeKnown (TPLC.Term TyName Name DefaultUni DefaultFun ()) a
-       , ReadKnown (UPLC.Term Name DefaultUni DefaultFun ()) a
+    :: ( MakeKnown (TPLC.Term TyName Name DefaultUni VCurrentDefaultFun ()) a
+       , ReadKnown (UPLC.Term Name DefaultUni VCurrentDefaultFun ()) a
        , Show a, Eq a
        )
     => Gen a -> Property
@@ -84,7 +84,7 @@ test_collectText = testProperty "collectText" . property $ do
             , rest
             ]
         term = foldr step unitval (reverse strs)
-    strs' <- case typecheckEvaluateCek TPLC.defaultCekParameters term of
+    strs' <- case typecheckEvaluateCek TPLC.vdefaultCekParameters term of
         Left _                             -> failure
         Right (EvaluationFailure, _)       -> failure
         Right (EvaluationSuccess _, strs') -> return strs'

@@ -10,6 +10,7 @@ module TypeSynthesis.Spec
 import PlutusPrelude
 
 import PlutusCore
+import PlutusCore.Default
 import PlutusCore.Builtin
 import PlutusCore.FsTree
 import PlutusCore.Pretty
@@ -25,7 +26,7 @@ import Test.Tasty.Extras
 import Test.Tasty.HUnit
 
 kindcheck
-    :: (uni ~ DefaultUni, fun ~ DefaultFun, MonadError (Error uni fun ()) m)
+    :: (uni ~ DefaultUni, fun ~ VCurrentDefaultFun, MonadError (Error uni fun ()) m)
     => Type TyName uni () -> m (Type TyName uni ())
 kindcheck ty = do
     _ <- runQuoteT $ do
@@ -57,7 +58,7 @@ assertWellTyped term = case runExcept . runQuoteT $ typecheck term of
     Right _   -> return ()
 
 -- | Assert a term is ill-typed.
-assertIllTyped :: HasCallStack => Term TyName Name DefaultUni DefaultFun () -> Assertion
+assertIllTyped :: HasCallStack => Term TyName Name DefaultUni VCurrentDefaultFun () -> Assertion
 assertIllTyped term = case runExcept . runQuoteT $ typecheck term of
     Right () -> assertFailure $ "Well-typed: " ++ displayPlcCondensedErrorClassic term
     Left  _  -> return ()
@@ -74,9 +75,9 @@ foldAssertWell =
 test_typecheckAvailable :: TestTree
 test_typecheckAvailable =
     testGroup "Available"
-        [ testGroup "DefaultFun"   $ foldAssertWell stdLib
+        [ testGroup "DefaultFun"   $ foldAssertWell (coerce @_ @(PlcFolderContents DefaultUni VCurrentDefaultFun) stdLib)
         , testGroup "ExtensionFun" $ foldAssertWell builtins
-        , testGroup "Both"         $ foldAssertWell examples
+        , testGroup "Both"         $ foldAssertWell (coerce @_ @(PlcFolderContents DefaultUni (Either VCurrentDefaultFun ExtensionFun)) examples)
         ]
 
 -- | Self-application. An example of ill-typed term.
@@ -113,7 +114,7 @@ test_typecheckAllFun name = testGroup name . map test_typecheckFun $ enumeration
 test_typecheckDefaultFuns :: TestTree
 test_typecheckDefaultFuns =
     testGroup "builtins"
-        [ test_typecheckAllFun @DefaultFun "DefaultFun"
+        [ test_typecheckAllFun @VCurrentDefaultFun "DefaultFun"
         , test_typecheckAllFun @ExtensionFun "ExtensionFun"
         ]
 

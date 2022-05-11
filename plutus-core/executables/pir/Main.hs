@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Main where
@@ -20,6 +21,7 @@ import GHC.Generics
 import Options.Applicative
 import Parsers
 import PlutusCore qualified as PLC
+import PlutusCore.Default
 import PlutusCore.Quote (runQuoteT)
 import PlutusIR as PIR
 import PlutusIR.Analysis.RetainedSize qualified as PIR
@@ -82,11 +84,12 @@ pPirOpts = hsubparser $
 
 
 type PIRTerm  = PIR.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ()
-type PLCTerm  = PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun (PIR.Provenance ())
-type PIRError = PIR.Error PLC.DefaultUni PLC.DefaultFun (PIR.Provenance ())
-type PIRCompilationCtx a = PIR.CompilationCtx PLC.DefaultUni PLC.DefaultFun a
+type VPIRTerm  = PIR.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
+type PLCTerm  = PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun (PIR.Provenance ())
+type VPIRError = PIR.Error PLC.DefaultUni PLC.VCurrentDefaultFun (PIR.Provenance ())
+type PIRCompilationCtx a = PIR.CompilationCtx PLC.DefaultUni PLC.VCurrentDefaultFun a
 
-compile :: COpts -> PIRTerm -> Either PIRError PLCTerm
+compile :: COpts -> VPIRTerm -> Either VPIRError PLCTerm
 compile opts pirT = do
     plcTcConfig <- PLC.getDefTypeCheckConfig PIR.noProvenance
     let pirCtx = defaultCompilationCtx plcTcConfig
@@ -95,14 +98,14 @@ compile opts pirT = do
     set' :: Lens' (PIR.CompilationOpts a) b -> (COpts -> b) -> PIRCompilationCtx a -> PIRCompilationCtx a
     set' pirOpt opt = set (PIR.ccOpts . pirOpt) (opt opts)
 
-    defaultCompilationCtx :: PLC.TypeCheckConfig PLC.DefaultUni PLC.DefaultFun -> PIRCompilationCtx a
+    defaultCompilationCtx :: PLC.TypeCheckConfig PLC.DefaultUni PLC.VCurrentDefaultFun -> PIRCompilationCtx a
     defaultCompilationCtx plcTcConfig =
       PIR.toDefaultCompilationCtx plcTcConfig
       & set' PIR.coOptimize                     cOptimize
 
 loadPirAndCompile :: COpts -> IO ()
 loadPirAndCompile copts = do
-    pirT <- loadPir $ cIn copts
+    pirT <- coerce <$> loadPir $ cIn copts
     putStrLn "!!! Compiling"
     case compile copts pirT of
         Left pirError -> error $ show pirError
@@ -111,7 +114,7 @@ loadPirAndCompile copts = do
 loadPirAndAnalyse :: AOpts -> IO ()
 loadPirAndAnalyse aopts = do
     -- load pir and make sure that it is globally unique (required for retained size)
-    pirT <- PLC.runQuote . PLC.rename <$> loadPir (aIn aopts)
+    pirT <- coerce @_ @VPIRTerm .  PLC.runQuote . PLC.rename <$> loadPir (aIn aopts)
     putStrLn "!!! Analysing for retention"
     let
         -- all the variable names (tynames coerced to names)

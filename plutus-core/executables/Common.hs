@@ -23,11 +23,13 @@ import PlutusCore.Generators.Test qualified as Gen
 import PlutusCore.Normalize (normalizeType)
 import PlutusCore.Pretty qualified as PP
 import PlutusCore.Rename (rename)
+import PlutusCore.Default
 import PlutusCore.StdLib.Data.Bool qualified as StdLib
 import PlutusCore.StdLib.Data.ChurchNat qualified as StdLib
 import PlutusCore.StdLib.Data.Integer qualified as StdLib
 import PlutusCore.StdLib.Data.Unit qualified as StdLib
 
+import Data.Coerce
 import Control.DeepSeq (NFData, rnf)
 import Control.Lens hiding (ix, op)
 import Control.Monad.Except
@@ -145,7 +147,7 @@ printBudgetStateBudget model b =
               putStrLn $ "Memory budget: " ++ show mem
 
 printBudgetStateTally :: (Eq fun, Cek.Hashable fun, Show fun)
-       => UPLC.Term UPLC.Name PLC.DefaultUni PLC.DefaultFun () -> CekModel ->  Cek.CekExTally fun -> IO ()
+       => UPLC.Term UPLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun () -> CekModel ->  Cek.CekExTally fun -> IO ()
 printBudgetStateTally term model (Cek.CekExTally costs) = do
   putStrLn $ "Const      " ++ pbudget (Cek.BStep Cek.BConst)
   putStrLn $ "Var        " ++ pbudget (Cek.BStep Cek.BVar)
@@ -194,7 +196,7 @@ printBudgetStateTally term model (Cek.CekExTally costs) = do
         totalTime = (getCPU $ getSpent Cek.BStartup) + getCPU totalComputeCost + getCPU builtinCosts
 
 class PrintBudgetState cost where
-    printBudgetState :: UPLC.Term PLC.Name PLC.DefaultUni PLC.DefaultFun () -> CekModel -> cost -> IO ()
+    printBudgetState :: UPLC.Term PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun () -> CekModel -> cost -> IO ()
     -- TODO: Tidy this up.  We're passing in the term and the CEK cost model
     -- here, but we only need them in tallying mode (where we need the term so
     -- we can print out the AST size and we need the model type to decide how
@@ -413,11 +415,11 @@ writeToFileOrStd outp v = do
 data TypeExample = TypeExample (PLC.Kind ()) (PLC.Type PLC.TyName PLC.DefaultUni ())
 data TypedTermExample = TypedTermExample
     (PLC.Type PLC.TyName PLC.DefaultUni ())
-    (PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ())
+    (PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun ())
 data SomeTypedExample = SomeTypeExample TypeExample | SomeTypedTermExample TypedTermExample
 
 newtype UntypedTermExample = UntypedTermExample
-    (UPLC.Term PLC.Name PLC.DefaultUni PLC.DefaultFun ())
+    (UPLC.Term PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun ())
 newtype SomeUntypedExample = SomeUntypedTermExample UntypedTermExample
 
 data SomeExample = SomeTypedExample SomeTypedExample | SomeUntypedExample SomeUntypedExample
@@ -439,17 +441,17 @@ prettyExample =
          SomeUntypedExample (SomeUntypedTermExample (UntypedTermExample term)) ->
              PP.prettyPlcDef $ UPLC.Program () (PLC.defaultVersion ()) term
 
-toTypedTermExample :: PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun () -> TypedTermExample
+toTypedTermExample :: PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun () -> TypedTermExample
 toTypedTermExample term = TypedTermExample ty term where
     program = PLC.Program () (PLC.defaultVersion ()) term
     errOrTy = PLC.runQuote . runExceptT $ do
         tcConfig <- PLC.getDefTypeCheckConfig ()
         PLC.typecheckPipeline tcConfig program
     ty = case errOrTy of
-        Left (err :: PLC.Error PLC.DefaultUni PLC.DefaultFun ()) -> errorWithoutStackTrace $ PP.displayPlcDef err
+        Left (err :: PLC.Error PLC.DefaultUni PLC.VCurrentDefaultFun ()) -> errorWithoutStackTrace $ PP.displayPlcDef err
         Right vTy                                                -> PLC.unNormalized vTy
 
-getInteresting :: IO [(ExampleName, PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ())]
+getInteresting :: IO [(ExampleName, PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun ())]
 getInteresting =
     sequence $ Gen.fromInterestingTermGens $ \name gen -> do
         Gen.TermOf term _ <- Gen.getSampleTermValue gen
@@ -457,7 +459,7 @@ getInteresting =
 
 simpleExamples :: [(ExampleName, SomeTypedExample)]
 simpleExamples =
-    [ ("succInteger", SomeTypedTermExample $ toTypedTermExample StdLib.succInteger)
+    [ ("succInteger", SomeTypedTermExample $ toTypedTermExample $ coerce @(PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ()) StdLib.succInteger)
     , ("unit"       , SomeTypeExample      $ TypeExample (PLC.Type ()) StdLib.unit)
     , ("unitval"    , SomeTypedTermExample $ toTypedTermExample StdLib.unitval)
     , ("bool"       , SomeTypeExample      $ TypeExample (PLC.Type ()) StdLib.bool)
@@ -623,8 +625,8 @@ typeSchemeToSignature = toSig []
 
 runPrintBuiltinSignatures :: IO ()
 runPrintBuiltinSignatures = do
-  let builtins = [minBound..maxBound] :: [UPLC.DefaultFun]
+  let builtins = [minBound..maxBound] :: [UPLC.VCurrentDefaultFun]
   mapM_ (\x -> putStr (printf "%-25s: %s\n" (show $ PP.pretty x) (show $ getSignature x))) builtins
-      where getSignature (PLC.toBuiltinMeaning @_ @_ @PlcTerm -> PLC.BuiltinMeaning sch _ _) = typeSchemeToSignature sch
+      where getSignature (PLC.toBuiltinMeaning @_ @_ @(PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun ()) -> PLC.BuiltinMeaning sch _ _) = typeSchemeToSignature sch
 
 

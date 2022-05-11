@@ -2,15 +2,18 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE TypeApplications         #-}
 
 module Main (main) where
 
 import Common
 import Parsers
+import PlutusCore.Default
 import PlutusCore qualified as PLC
 import PlutusCore.Evaluation.Machine.ExBudget (ExBudget (..), ExRestrictingBudget (..))
 import PlutusCore.Evaluation.Machine.ExMemory (ExCPU (..), ExMemory (..))
 
+import Data.Coerce
 import Data.Foldable (asum)
 import Data.Functor (void)
 import Data.List (nub)
@@ -36,7 +39,7 @@ uplcInfoCommand = plutus uplcHelpText
 data BudgetMode  = Silent
                  | Verbose SomeBudgetMode
 
-data SomeBudgetMode = forall cost. (Eq cost, NFData cost, PrintBudgetState cost) => SomeBudgetMode (Cek.ExBudgetMode cost PLC.DefaultUni PLC.DefaultFun)
+data SomeBudgetMode = forall cost. (Eq cost, NFData cost, PrintBudgetState cost) => SomeBudgetMode (Cek.ExBudgetMode cost PLC.DefaultUni PLC.VCurrentDefaultFun)
 
 data EvalOptions = EvalOptions Input Format PrintMode BudgetMode TraceMode Output TimingMode CekModel
 
@@ -166,12 +169,12 @@ runApply (ApplyOptions inputfiles ifmt outp ofmt mode) = do
 
 runEval :: EvalOptions -> IO ()
 runEval (EvalOptions inp ifmt printMode budgetMode traceMode outputMode timingMode cekModel) = do
-    prog <- getProgram ifmt inp
+    prog <- coerce @(UplcProg PLC.SourcePos) @(UPLC.Program PLC.Name PLC.DefaultUni PLC.VCurrentDefaultFun PLC.SourcePos) <$> getProgram ifmt inp
     let term = void $ prog ^. UPLC.progTerm
         !_ = rnf term
         cekparams = case cekModel of
-                    Default -> PLC.defaultCekParameters  -- AST nodes are charged according to the default cost model
-                    Unit    -> PLC.unitCekParameters     -- AST nodes are charged one unit each, so we can see how many times each node
+                    Default -> PLC.vdefaultCekParameters  -- AST nodes are charged according to the default cost model
+                    Unit    -> PLC.vunitCekParameters     -- AST nodes are charged one unit each, so we can see how many times each node
                                                          -- type is encountered.  This is useful for calibrating the budgeting code
     let budgetM = case budgetMode of
             Silent     -> SomeBudgetMode Cek.restrictingEnormous

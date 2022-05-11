@@ -17,6 +17,7 @@ import PlutusCore.StdLib.Meta.Data.Tuple
 import PlutusCore.StdLib.Type
 
 import PlutusCore
+import PlutusCore.Default
 import PlutusCore.Evaluation.Machine.Ck
 import PlutusCore.Generators.Interesting
 import PlutusCore.MkPlc
@@ -30,6 +31,9 @@ import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Test.Tasty
 import Test.Tasty.Golden
+
+mkBuiltin :: DefaultFun -> Term TyName Name uni VCurrentDefaultFun ()
+mkBuiltin = Builtin () . Tagged
 
 -- (con integer)
 integer :: uni `Includes` Integer => Type TyName uni ()
@@ -140,52 +144,52 @@ closure = runQuote $ do
 
 -- Various components that we'll use to build larger terms for testing
 
-lte :: Term TyName Name DefaultUni DefaultFun ()
-lte = Builtin () LessThanEqualsInteger
+lte :: Term TyName Name DefaultUni VCurrentDefaultFun ()
+lte = mkBuiltin LessThanEqualsInteger
 
-eleven :: Term TyName Name DefaultUni DefaultFun ()
+eleven :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 eleven = mkConstant @Integer () 11
 
-twentytwo :: Term TyName Name DefaultUni DefaultFun ()
+twentytwo :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 twentytwo = mkConstant @Integer () 22
 
-stringResultTrue :: Term TyName Name DefaultUni DefaultFun ()
+stringResultTrue :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 stringResultTrue = mkConstant @Text () "11 <= 22"
 
-stringResultFalse :: Term TyName Name DefaultUni DefaultFun ()
+stringResultFalse :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 stringResultFalse = mkConstant @Text () "¬(11 <= 22)"
 
 -- 11 <= 22
-lteExpr :: Term TyName Name DefaultUni DefaultFun ()
+lteExpr :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 lteExpr = mkIterApp () lte [eleven, twentytwo]
 
 
 -- Various combinations of (partial) instantiation/application for ifThenElse
 
 -- (builtin ifThenElse) : WellTypedRuns
-ite :: Term TyName Name DefaultUni DefaultFun ()
-ite = Builtin () IfThenElse
+ite :: Term TyName Name DefaultUni VCurrentDefaultFun ()
+ite = mkBuiltin IfThenElse
 
 -- { (builtin ifThenElse) t }
-iteAt :: Type TyName DefaultUni () -> Term TyName Name DefaultUni DefaultFun ()
+iteAt :: Type TyName DefaultUni () -> Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAt = TyInst () ite
 
 -- [ (builtin ifThenElse) (11<=22) ] : IllTypedFails (ifThenElse isn't
 -- instantiated: type expected, term supplied.)
-iteUninstantiatedWithCond :: Term TyName Name DefaultUni DefaultFun ()
+iteUninstantiatedWithCond :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteUninstantiatedWithCond  = Apply () ite lteExpr
 
 -- (builtin ifThenElse) (11<=22) "11 <= 22" "¬(11<=22)" : IllTypedFails (no
 -- instantiation)
-iteUninstantiatedFullyApplied :: Term TyName Name DefaultUni DefaultFun ()
+iteUninstantiatedFullyApplied :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteUninstantiatedFullyApplied = mkIterApp () ite [lteExpr, stringResultTrue, stringResultFalse]
 
 -- { (builtin ifThenElse) (con integer) } : WellTypedRuns
-iteAtInteger :: Term TyName Name DefaultUni DefaultFun ()
+iteAtInteger :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtInteger = iteAt integer
 
 -- [ { (builtin ifThenElse) (con integer) } (11<=22)] : WellTypedRuns
-iteAtIntegerWithCond :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerWithCond :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerWithCond = Apply () iteAtInteger lteExpr
 
 -- [ { (builtin ifThenElse) (con integer) } "11 <= 22" "¬(11<=22)" ] :
@@ -193,66 +197,66 @@ iteAtIntegerWithCond = Apply () iteAtInteger lteExpr
 -- and a boolean is expected. Even though it's not saturated, it won't execute succefully,
 -- because the builtin application machinery unlifts an argument the moment it gets it,
 -- without waiting for full saturation.
-iteAtIntegerWrongCondType :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerWrongCondType :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerWrongCondType = mkIterApp () iteAtInteger [stringResultTrue, stringResultFalse]
 
 -- [ { (builtin ifThenElse) (con integer) } (11<=22) "11 <= 22" "¬(11<=22)" ] :
 -- IllTypedRuns.  We're instantiating at `integer` but returning a string: at
 -- execution time we only check that type instantiations and term arguments are
 -- correctly interleaved, not that instantiations are correct.
-iteAtIntegerFullyApplied :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerFullyApplied :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerFullyApplied = mkIterApp () iteAtIntegerWithCond [stringResultTrue, stringResultFalse]
 
 -- [ (builtin divideInteger) 1 0 ] : WellTypedFails. Division by zero.
-diFullyApplied :: Term TyName Name DefaultUni DefaultFun ()
-diFullyApplied = mkIterApp () (Builtin () DivideInteger)
+diFullyApplied :: Term TyName Name DefaultUni VCurrentDefaultFun ()
+diFullyApplied = mkIterApp () (mkBuiltin DivideInteger)
     [ mkConstant @Integer () 1
     , mkConstant @Integer () 0
     ]
 
 -- { (builtin ifThenElse) (con string) } : WellTypedRuns
-iteAtString :: Term TyName Name DefaultUni DefaultFun ()
+iteAtString :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtString = iteAt string
 
 -- [ { (builtin ifThenElse) (con string) } (11<=22) ] : WellTypedRuns
-iteAtStringWithCond :: Term TyName Name DefaultUni DefaultFun ()
+iteAtStringWithCond :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtStringWithCond = Apply () iteAtString lteExpr
 
 -- [ { (builtin ifThenElse)  (con string) } (11<=22) "11 <= 22" "¬(11<=22)" ] : WellTypedRuns
-iteAtStringFullyApplied :: Term TyName Name DefaultUni DefaultFun ()
+iteAtStringFullyApplied :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtStringFullyApplied = mkIterApp () iteAtStringWithCond [stringResultTrue, stringResultFalse]
 
 -- { builtin ifThenElse (fun (con integer) (con integer)) } : WellTypedRuns
-iteAtIntegerArrowInteger :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerArrowInteger :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerArrowInteger = iteAt (TyFun () integer integer)
 
 -- [ { (builtin ifThenElse) (fun (con integer) (con integer)) } (11<=22) ] : WellTypedRuns
-iteAtIntegerArrowIntegerWithCond :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerArrowIntegerWithCond :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerArrowIntegerWithCond = Apply () iteAtIntegerArrowInteger lteExpr
 
 -- [ { (builtin ifThenElse) (fun (con integer) (con integer)) } (11<=22) (11 *) (22 -)] :
 -- WellTypedRuns (returns a function of type int -> int)
-iteAtIntegerArrowIntegerApplied1 ::  Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerArrowIntegerApplied1 ::  Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerArrowIntegerApplied1 =  mkIterApp ()
                                    iteAtIntegerArrowInteger
                                    [ lteExpr
-                                   , Apply () (Builtin () MultiplyInteger) eleven
-                                   , Apply () (Builtin () SubtractInteger) twentytwo
+                                   , Apply () (mkBuiltin MultiplyInteger) eleven
+                                   , Apply () (mkBuiltin SubtractInteger) twentytwo
                                    ]
 
 -- [ { (builtin ifThenElse) (fun (con integer) (con integer)) } (11<=22) (*) (-)] :
 -- IllTypedRuns (int -> int -> int instead of int -> int).
-iteAtIntegerArrowIntegerApplied2 ::  Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerArrowIntegerApplied2 ::  Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerArrowIntegerApplied2 =  mkIterApp ()
                                     iteAtIntegerArrowInteger
                                     [ lteExpr
-                                    , Builtin () MultiplyInteger
-                                    , Builtin () SubtractInteger
+                                    , mkBuiltin MultiplyInteger
+                                    , mkBuiltin SubtractInteger
                                     ]
 
 -- [ { (builtin ifThenElse) (fun (con integer) (con integer)) } (11<=22) (11 *) (22 -) 22] :
 -- WellTypedRuns (ifThenElse returns a function which is then applied to a constant).
-iteAtIntegerArrowIntegerAppliedApplied :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerArrowIntegerAppliedApplied :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerArrowIntegerAppliedApplied =  Apply () iteAtIntegerArrowIntegerApplied1 twentytwo
 
 -- { (builtin ifThenElse) (lam a . a -> a) } : IllTypedRuns.
@@ -260,28 +264,28 @@ iteAtIntegerArrowIntegerAppliedApplied =  Apply () iteAtIntegerArrowIntegerAppli
 -- The built-in function machinery does allow builtins which are polymorphic
 -- over higher-kinded types, but `ifThenElse` can only be instantiated with
 -- types of kind *.
-iteAtHigherKind :: Term TyName Name DefaultUni DefaultFun ()
+iteAtHigherKind :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtHigherKind = iteAt (TyLam () a (Type ()) aArrowA)
     where a = TyName (Name "a" (Unique 0))
           aArrowA = TyFun () (TyVar () a) (TyVar () a)
 
 -- [ { (builtin ifThenElse) (lam a . a -> a) } (11<=22) ] : IllTypedRuns
 -- (illegal kind)
-iteAtHigherKindWithCond :: Term TyName Name DefaultUni DefaultFun ()
+iteAtHigherKindWithCond :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtHigherKindWithCond = Apply () iteAtHigherKind lteExpr
 
 -- [ {(builtin ifThenElse) (lam a . a -> a) } (11<=22) "11 <= 22" "¬(11<=22) ]" :
 -- IllTypedRuns (illegal kind)
-iteAtHigherKindFullyApplied :: Term TyName Name DefaultUni DefaultFun ()
+iteAtHigherKindFullyApplied :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtHigherKindFullyApplied = mkIterApp () (Apply () iteAtHigherKind lteExpr) [stringResultTrue, stringResultFalse]
 
 -- { {(builtin ifThenElse) integer} integer } : IllTypedFails (instantiated twice).
-iteAtIntegerAtInteger :: Term TyName Name DefaultUni DefaultFun ()
+iteAtIntegerAtInteger :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteAtIntegerAtInteger = TyInst () iteAtInteger integer
 
 -- { [ { (builtin ifThenElse) integer } (11<=22)] integer } : IllTypedFails
 -- (term expected, type supplied).
-iteTypeTermType :: Term TyName Name DefaultUni DefaultFun ()
+iteTypeTermType :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 iteTypeTermType = TyInst () iteAtIntegerWithCond string
 
 
@@ -289,23 +293,23 @@ iteTypeTermType = TyInst () iteAtIntegerWithCond string
 -- polymorphic, so most should fail (and we're checking that they _do_ fail).
 
 -- (builtin multiplyInteger) (not tested)
-mul ::  Term TyName Name DefaultUni DefaultFun ()
-mul = Builtin () MultiplyInteger
+mul ::  Term TyName Name DefaultUni VCurrentDefaultFun ()
+mul = mkBuiltin MultiplyInteger
 
 -- [ [ (builtin multiplyInteger) 11 ] 22 ] : WellTypedRuns
-mulOK :: Term TyName Name DefaultUni DefaultFun ()
+mulOK :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 mulOK = Apply () (Apply () mul eleven) twentytwo
 
 -- [ [ { (builtin multiplyInteger) string } 11 ] 22 ]: IllTypedFails
-mulInstError1 :: Term TyName Name DefaultUni DefaultFun ()
+mulInstError1 :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 mulInstError1 = Apply () (Apply () (TyInst () mul string) eleven) twentytwo
 
 -- [ [ { (builtin multiplyInteger) 11 ] string } 22 ]: IllTypedFails
-mulInstError2 :: Term TyName Name DefaultUni DefaultFun ()
+mulInstError2 :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 mulInstError2 = Apply () (TyInst () (Apply () mul eleven) string) twentytwo
 
 -- { [ [ (builtin multiplyInteger) 11 ] 22 ] string } : IllTypedFails
-mulInstError3 :: Term TyName Name DefaultUni DefaultFun ()
+mulInstError3 :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 mulInstError3 = TyInst () (Apply () (Apply () mul eleven) twentytwo) string
 
 
@@ -316,40 +320,40 @@ goldenVsPretty extn name value =
     goldenVsString name ("untyped-plutus-core/test/Evaluation/Golden/" ++ name ++ extn) $
         pure . BSL.fromStrict . encodeUtf8 . render $ prettyPlcClassicDebug value
 
-goldenVsEvaluatedCK :: String -> Term TyName Name DefaultUni DefaultFun () -> TestTree
+goldenVsEvaluatedCK :: String -> Term TyName Name DefaultUni VCurrentDefaultFun () -> TestTree
 goldenVsEvaluatedCK name
     = goldenVsPretty ".plc.golden" name
     . bimap (fmap UPLC.erase) UPLC.erase
-    . evaluateCkNoEmit defaultBuiltinsRuntime
+    . evaluateCkNoEmit vdefaultBuiltinsRuntime
 
-goldenVsEvaluatedCEK :: String -> Term TyName Name DefaultUni DefaultFun () -> TestTree
+goldenVsEvaluatedCEK :: String -> Term TyName Name DefaultUni VCurrentDefaultFun () -> TestTree
 goldenVsEvaluatedCEK name
     = goldenVsPretty ".uplc.golden" name
-    . evaluateCekNoEmit defaultCekParameters
+    . evaluateCekNoEmit vdefaultCekParameters
     . UPLC.erase
 
 runTypecheck
-    :: Term TyName Name DefaultUni DefaultFun ()
-    -> Either (Error DefaultUni DefaultFun ()) (Normalized (Type TyName DefaultUni ()))
+    :: Term TyName Name DefaultUni VCurrentDefaultFun ()
+    -> Either (Error DefaultUni VCurrentDefaultFun ()) (Normalized (Type TyName DefaultUni ()))
 runTypecheck term =
   runQuoteT $ do
     tcConfig <- getDefTypeCheckConfig ()
     inferType tcConfig term
 
-goldenVsTypechecked :: String -> Term TyName Name DefaultUni DefaultFun () -> TestTree
+goldenVsTypechecked :: String -> Term TyName Name DefaultUni VCurrentDefaultFun () -> TestTree
 goldenVsTypechecked name = goldenVsPretty ".type.golden" name . runTypecheck
 
-goldenVsTypecheckedEvaluatedCK :: String -> Term TyName Name DefaultUni DefaultFun () -> TestTree
+goldenVsTypecheckedEvaluatedCK :: String -> Term TyName Name DefaultUni VCurrentDefaultFun () -> TestTree
 goldenVsTypecheckedEvaluatedCK name term =
     -- The CK machine can evaluate an ill-typed term to a well-typed one, so we check
     -- that the term is well-typed before checking that the type of the result is the
     -- one stored in the golden file (we could simply check the two types for equality,
     -- but since we're doing golden testing in this file, why not do it here as well).
-    case (runTypecheck term, evaluateCkNoEmit defaultBuiltinsRuntime term) of
+    case (runTypecheck term, evaluateCkNoEmit vdefaultBuiltinsRuntime term) of
         (Right _, Right res) -> goldenVsTypechecked name res
         _                    -> testGroup name []
 
-namesAndTests :: [(String, Term TyName Name DefaultUni DefaultFun ())]
+namesAndTests :: [(String, Term TyName Name DefaultUni VCurrentDefaultFun ())]
 namesAndTests =
    [ ("even2", Apply () even $ metaIntegerToNat 2)
    , ("even3", Apply () even $ metaIntegerToNat 3)

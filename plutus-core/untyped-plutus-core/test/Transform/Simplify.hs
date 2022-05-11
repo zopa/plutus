@@ -14,28 +14,28 @@ import Data.Text.Encoding (encodeUtf8)
 import Test.Tasty
 import Test.Tasty.Golden
 
-basic :: Term Name PLC.DefaultUni PLC.DefaultFun ()
+basic :: Term Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 basic = Force () $ Delay () $ mkConstant @Integer () 1
 
-nested :: Term Name PLC.DefaultUni PLC.DefaultFun ()
+nested :: Term Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 nested = Force () $ Force () $ Delay () $ Delay () $ mkConstant @Integer () 1
 
-extraDelays :: Term Name PLC.DefaultUni PLC.DefaultFun ()
+extraDelays :: Term Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 extraDelays = Force () $ Delay () $ Delay () $ mkConstant @Integer () 1
 
-interveningLambda :: Term Name PLC.DefaultUni PLC.DefaultFun ()
+interveningLambda :: Term Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 interveningLambda = runQuote $ do
     n <- freshName "a"
     let lam = LamAbs () n $ Delay () $ Apply () (Var () n) (Var () n)
         arg = mkConstant @Integer () 1
     pure $ Force () $ Apply () lam arg
 
-basicInline :: Term Name PLC.DefaultUni PLC.DefaultFun ()
+basicInline :: Term Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 basicInline = runQuote $ do
     n <- freshName "a"
     pure $ Apply () (LamAbs () n (Var () n)) (mkConstant @Integer () 1)
 
-multiApp :: Term Name PLC.DefaultUni PLC.DefaultFun ()
+multiApp :: Term Name PLC.DefaultUni PLC.VCurrentDefaultFun ()
 multiApp = runQuote $ do
     a <- freshName "a"
     b <- freshName "b"
@@ -50,7 +50,7 @@ goldenVsPretty extn name value =
     goldenVsString name ("untyped-plutus-core/test/Transform/" ++ name ++ extn) $
         pure . BSL.fromStrict . encodeUtf8 . render $ prettyPlcClassicDebug value
 
-goldenVsSimplified :: String -> Term Name PLC.DefaultUni PLC.DefaultFun () -> TestTree
+goldenVsSimplified :: String -> Term Name PLC.DefaultUni PLC.VCurrentDefaultFun () -> TestTree
 goldenVsSimplified name
     = goldenVsPretty ".plc.golden" name
     . PLC.runQuote

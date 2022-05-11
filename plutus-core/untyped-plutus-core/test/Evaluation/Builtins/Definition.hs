@@ -45,8 +45,10 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.Hedgehog
 
+import PlutusCore.Default
+
 defaultCekParametersExt
-    :: MachineParameters CekMachineCosts CekValue DefaultUni (Either DefaultFun ExtensionFun)
+    :: MachineParameters CekMachineCosts CekValue DefaultUni (Either VCurrentDefaultFun ExtensionFun)
 defaultCekParametersExt =
     mkMachineParameters defaultUnliftingMode $
         CostModel defaultCekMachineCosts (defaultBuiltinCostModel, ())
@@ -75,7 +77,7 @@ test_Const =
             tB = mkConstant () b
             text = toTypeAst @_ @DefaultUni @Text Proxy
             runConst con = mkIterApp () (mkIterInst () con [text, bool]) [tC, tB]
-            lhs = typecheckReadKnownCek defaultCekParametersExt $ runConst $ builtin () (Right Const)
+            lhs = typecheckReadKnownCek defaultCekParametersExt $ runConst $ builtin () (Right @DefaultFun Const)
             rhs = typecheckReadKnownCek defaultCekParametersExt $ runConst $ mapFun Left Plc.const
         lhs === Right (Right c)
         lhs === rhs
@@ -90,7 +92,7 @@ test_Id =
             oneU = mkConstant @Integer @DefaultUni () 1
             -- id {integer -> integer} ((\(i : integer) (j : integer) -> i) 1) 0
             term =
-                mkIterApp () (tyInst () (builtin () $ Right Id) (TyFun () integer integer))
+                mkIterApp () (tyInst () (builtin () $ Right @DefaultFun Id) (TyFun () integer integer))
                     [ apply () constIntegerInteger oneT
                     , zer
                     ] where
@@ -178,7 +180,7 @@ test_FailingSucc :: TestTree
 test_FailingSucc =
     testCase "FailingSucc" $ do
         let term =
-                apply () (builtin () $ Right FailingSucc) $
+                apply () (builtin () $ Right @DefaultFun FailingSucc) $
                     mkConstant @Integer @DefaultUni () 0
         typeErrOrEvalExcOrRes :: Either _ (Either BuiltinErrorCall _) <-
             -- Here we rely on 'typecheckAnd' lazily running the action after type checking the term.
@@ -192,7 +194,7 @@ test_ExpensiveSucc :: TestTree
 test_ExpensiveSucc =
     testCase "ExpensiveSucc" $ do
         let term =
-                apply () (builtin () $ Right ExpensiveSucc) $
+                apply () (builtin () $ Right @DefaultFun ExpensiveSucc) $
                     mkConstant @Integer @DefaultUni () 0
         typeErrOrEvalExcOrRes :: Either _ (Either BuiltinErrorCall _) <-
             traverse (try . evaluate) $ typecheckEvaluateCekNoEmit defaultCekParametersExt term
@@ -204,7 +206,7 @@ test_FailingPlus :: TestTree
 test_FailingPlus =
     testCase "FailingPlus" $ do
         let term =
-                mkIterApp () (builtin () $ Right FailingPlus)
+                mkIterApp () (builtin () $ Right @DefaultFun FailingPlus)
                     [ mkConstant @Integer @DefaultUni () 0
                     , mkConstant @Integer @DefaultUni () 1
                     ]
@@ -220,7 +222,7 @@ test_ExpensivePlus :: TestTree
 test_ExpensivePlus =
     testCase "ExpensivePlus" $ do
         let term =
-                mkIterApp () (builtin () $ Right ExpensivePlus)
+                mkIterApp () (builtin () $ Right @DefaultFun ExpensivePlus)
                     [ mkConstant @Integer @DefaultUni () 0
                     , mkConstant @Integer @DefaultUni () 1
                     ]
@@ -240,7 +242,7 @@ test_BuiltinList =
                     , mkConstant @Integer () 0
                     , mkConstant @[Integer] () xs
                     ]
-        typecheckEvaluateCekNoEmit defaultCekParameters term @?= Right (EvaluationSuccess res)
+        typecheckEvaluateCekNoEmit vdefaultCekParameters term @?= Right (EvaluationSuccess res)
 
 -- | Test that right-folding a built-in list with built-in 'Cons' recreates that list.
 test_IdBuiltinList :: TestTree
@@ -251,7 +253,7 @@ test_IdBuiltinList =
             listOfInteger = mkTyBuiltin @_ @[Integer] ()
             term
                 = mkIterApp () (mkIterInst () (mapFun Left Builtin.foldrList) [integer, listOfInteger])
-                    [ tyInst () (builtin () $ Left MkCons) integer
+                    [ tyInst () (builtin () $ Left @_ @ExtensionFun MkCons) integer
                     , mkConstant @[Integer] () []
                     , xsTerm
                     ]
@@ -306,7 +308,7 @@ test_SwapEls =
                     , mkConstant @Integer () 0
                     , mkConstant () xs
                     ]
-        typecheckEvaluateCekNoEmit defaultCekParameters term @?= Right (EvaluationSuccess res)
+        typecheckEvaluateCekNoEmit vdefaultCekParameters term @?= Right (EvaluationSuccess res)
 
 -- | Test that right-folding a built-in 'Data' with the constructors of 'Data' recreates the
 -- original value.
@@ -408,9 +410,9 @@ test_List = testCase "List" $ do
     evalsL @[Integer] [1] MkCons integer [cons @Integer 1, cons @[Integer] []]
     evalsL @[Integer] [1,2] MkCons integer [cons @Integer 1, cons @[Integer] [2]]
 
-    Right (EvaluationSuccess true)  @=?  typecheckEvaluateCekNoEmit defaultCekParameters (nullViaChooseList [])
-    Right (EvaluationSuccess false)  @=?  typecheckEvaluateCekNoEmit defaultCekParameters (nullViaChooseList [1])
-    Right (EvaluationSuccess false)  @=?  typecheckEvaluateCekNoEmit defaultCekParameters (nullViaChooseList [1..10])
+    Right (EvaluationSuccess true)  @=?  typecheckEvaluateCekNoEmit vdefaultCekParameters (nullViaChooseList [])
+    Right (EvaluationSuccess false)  @=?  typecheckEvaluateCekNoEmit vdefaultCekParameters (nullViaChooseList [1])
+    Right (EvaluationSuccess false)  @=?  typecheckEvaluateCekNoEmit vdefaultCekParameters (nullViaChooseList [1..10])
 
  where
    evalsL :: Contains DefaultUni a => a -> DefaultFun -> Type TyName DefaultUni () -> [Term TyName Name DefaultUni DefaultFun ()]  -> Assertion
@@ -418,14 +420,14 @@ test_List = testCase "List" $ do
     let actualExp = mkIterApp () (tyInst () (builtin () b) tyArg) args
     in  Right (EvaluationSuccess $ cons expectedVal)
         @=?
-        typecheckEvaluateCekNoEmit defaultCekParameters actualExp
+        typecheckEvaluateCekNoEmit vdefaultCekParameters actualExp
 
    failsL :: DefaultFun -> Type TyName DefaultUni () -> [Term TyName Name DefaultUni DefaultFun ()]  -> Assertion
    failsL b tyArg args =
     let actualExp = mkIterApp () (tyInst () (builtin () b) tyArg) args
     in  Right EvaluationFailure
         @=?
-        typecheckEvaluateCekNoEmit defaultCekParameters actualExp
+        typecheckEvaluateCekNoEmit vdefaultCekParameters actualExp
 
    -- the null function that utilizes the ChooseList builtin (through the caseList helper function)
    nullViaChooseList :: [Integer] -> Term TyName Name DefaultUni DefaultFun ()
@@ -506,7 +508,7 @@ test_Data = testCase "Data" $ do
                               pure $ lamAbs () a1 (mkTyBuiltin @_ @ByteString ()) false
                       ]
 
-    Right (EvaluationSuccess true)  @=?  typecheckEvaluateCekNoEmit defaultCekParameters actualExp
+    Right (EvaluationSuccess true)  @=?  typecheckEvaluateCekNoEmit vdefaultCekParameters actualExp
 
 -- | Test all cryptography-related builtins
 test_Crypto :: TestTree
@@ -545,13 +547,13 @@ test_Crypto = testCase "Crypto" $ do
 test_Other :: TestTree
 test_Other = testCase "Other" $ do
     let expr1 = mkIterApp () (tyInst () (builtin () ChooseUnit) bool) [unitval, true]
-    Right (EvaluationSuccess true) @=? typecheckEvaluateCekNoEmit defaultCekParameters expr1
+    Right (EvaluationSuccess true) @=? typecheckEvaluateCekNoEmit vdefaultCekParameters expr1
 
     let expr2 = mkIterApp () (tyInst () (builtin () IfThenElse) integer) [true, cons @Integer 1, cons @Integer 0]
-    Right (EvaluationSuccess $ cons @Integer 1) @=? typecheckEvaluateCekNoEmit defaultCekParameters expr2
+    Right (EvaluationSuccess $ cons @Integer 1) @=? typecheckEvaluateCekNoEmit vdefaultCekParameters expr2
 
     let expr3 = mkIterApp () (tyInst () (builtin () Trace) integer) [cons @Text "hello world", cons @Integer 1]
-    Right (EvaluationSuccess $ cons @Integer 1) @=? typecheckEvaluateCekNoEmit defaultCekParameters expr3
+    Right (EvaluationSuccess $ cons @Integer 1) @=? typecheckEvaluateCekNoEmit vdefaultCekParameters expr3
 
 -- shorthand
 cons :: (Contains DefaultUni a, TermLike term tyname name DefaultUni fun) => a -> term ()
@@ -563,7 +565,7 @@ evals expectedVal b args =
     let actualExp = mkIterApp () (builtin () b) args
     in  Right (EvaluationSuccess $ cons expectedVal)
         @=?
-        typecheckEvaluateCekNoEmit defaultCekParameters actualExp
+        typecheckEvaluateCekNoEmit vdefaultCekParameters actualExp
 
 -- shorthand
 fails :: DefaultFun -> [Term TyName Name DefaultUni DefaultFun ()]  -> Assertion
@@ -571,7 +573,7 @@ fails b args =
     let actualExp = mkIterApp () (builtin () b) args
     in  Right EvaluationFailure
         @=?
-        typecheckEvaluateCekNoEmit defaultCekParameters actualExp
+        typecheckEvaluateCekNoEmit vdefaultCekParameters actualExp
 
 test_definition :: TestTree
 test_definition =

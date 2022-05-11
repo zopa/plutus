@@ -90,7 +90,7 @@ type TypeEvalCheckM uni fun = Either (TypeEvalCheckError uni fun)
 -- See Note [Type-eval checking].
 -- | Type check and evaluate a term and check that the expected result is equal to the actual one.
 typeEvalCheckBy
-    :: ( uni ~ DefaultUni, fun ~ DefaultFun
+    :: ( uni ~ DefaultUni, fun ~ VCurrentDefaultFun
        , KnownTypeAst uni a, MakeKnown (Term TyName Name uni fun ()) a
        , PrettyPlc internal
        )
@@ -119,13 +119,13 @@ typeEvalCheckBy eval (TermOf term (x :: a)) = TermOf term <$> do
 -- | Type check and evaluate a term and check that the expected result is equal to the actual one.
 -- Throw an error in case something goes wrong.
 unsafeTypeEvalCheck
-    :: ( uni ~ DefaultUni, fun ~ DefaultFun
+    :: ( uni ~ DefaultUni, fun ~ VCurrentDefaultFun
        , KnownTypeAst uni a, MakeKnown (Term TyName Name uni fun ()) a
        )
     => TermOf (Term TyName Name uni fun ()) a
     -> TermOf (Term TyName Name uni fun ()) (EvaluationResult (Term TyName Name uni fun ()))
 unsafeTypeEvalCheck termOfTbv = do
-    let errOrRes = typeEvalCheckBy (evaluateCkNoEmit defaultBuiltinsRuntime) termOfTbv
+    let errOrRes = typeEvalCheckBy (evaluateCkNoEmit vdefaultBuiltinsRuntime) termOfTbv
     case errOrRes of
         Left err         -> error $ concat
             [ prettyPlcErrorString err

@@ -304,7 +304,8 @@ library
         witherable -any,
         word-array -any,
         cardano-crypto-class -any,
-        index-envs
+        index-envs -any,
+        tagged -any
 
 -- could split this up if we split up the main library for UPLC/PLC/PIR
 library plutus-core-testlib
@@ -693,7 +694,6 @@ library index-envs
         base >=4.9 && <5,
         containers -any,
         extra -any,
-        vector -any,
         nonempty-vector -any,
         -- broken for ral-0.2 conflicts with cardano-binary:recursion-schemes
         ral == 0.1

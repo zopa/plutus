@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications          #-}
 
 module Names.Spec where
 
@@ -23,14 +24,14 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.Hedgehog
 
-prop_DeBruijn :: Gen (TermOf (Term TyName Name DefaultUni DefaultFun ()) a) -> Property
+prop_DeBruijn :: Gen (TermOf (Term TyName Name DefaultUni VCurrentDefaultFun ()) a) -> Property
 prop_DeBruijn gen = property . generalizeT $ do
     TermOf body _ <- forAllNoShowT gen
     let
         forward = deBruijnTerm
         backward
-            :: Either FreeVariableError (Term NamedTyDeBruijn NamedDeBruijn DefaultUni DefaultFun a)
-            -> Either FreeVariableError (Term TyName Name DefaultUni DefaultFun a)
+            :: Either FreeVariableError (Term NamedTyDeBruijn NamedDeBruijn DefaultUni VCurrentDefaultFun a)
+            -> Either FreeVariableError (Term TyName Name DefaultUni VCurrentDefaultFun a)
         backward e = e >>= (\t -> runQuoteT $ unDeBruijnTerm t)
     Hedgehog.tripping body forward backward
 
@@ -42,7 +43,7 @@ test_DeBruijnInteresting =
 test_mangle :: TestTree
 test_mangle = testProperty "equality does not survive mangling" . property $ do
     (term, termMangled) <- forAll . Gen.just . runAstGen $ do
-        term <- AST.genTerm
+        term <- AST.genTerm @DefaultFun
         mayTermMang <- mangleNames term
         pure $ do
             termMang <- mayTermMang
@@ -54,7 +55,7 @@ prop_equalityFor
     :: program ~ Program TyName Name DefaultUni DefaultFun ()
     => (program -> Quote program) -> Property
 prop_equalityFor ren = property $ do
-    prog <- forAllPretty $ runAstGen genProgram
+    prog <- forAllPretty $ runAstGen $ genProgram @DefaultFun
     let progRen = runQuote $ ren prog
     Hedgehog.assert $ progRen == prog && prog == progRen
 
@@ -87,7 +88,7 @@ test_alphaEquality = testCase "alphaEquality" $ do
         lamX = LamAbs () xName varType varX
         lamY = LamAbs () yName varType varY
 
-        term0, term1 :: Term TyName Name DefaultUni DefaultFun ()
+        term0, term1 :: Term TyName Name DefaultUni VCurrentDefaultFun ()
 
         -- [(lam x a x) x]
         term0 = Apply () lamX varX
@@ -174,8 +175,8 @@ test_names =
         , test_equalityRename
         , test_equalityBrokenRename
         , test_equalityNoMarkRename
-        , test_scopingGood genProgram rename
-        , test_scopingBad genProgram markNonFreshProgram renameProgramM
+        , test_scopingGood (genProgram @DefaultFun) rename
+        , test_scopingBad (genProgram @DefaultFun) markNonFreshProgram renameProgramM
         , test_alphaEquality
         , test_rebindShadowedVariable
         , test_rebindCapturedVariable

@@ -15,7 +15,6 @@ import PlutusCore.Test
 
 import PlutusIR.Analysis.RetainedSize qualified as RetainedSize
 import PlutusIR.Error as PIR
-import PlutusIR.Parser
 import PlutusIR.Test
 import PlutusIR.Transform.Beta qualified as Beta
 import PlutusIR.Transform.DeadCode qualified as DeadCode
@@ -49,7 +48,7 @@ transform = testNested "transform" [
 
 thunkRecursions :: TestNested
 thunkRecursions = testNested "thunkRecursions"
-    $ map (goldenPir ThunkRec.thunkRecursions pTerm)
+    $ map (goldenPir ThunkRec.thunkRecursions)
     [ "listFold"
     , "monoMap"
     , "errorBinding"
@@ -57,14 +56,14 @@ thunkRecursions = testNested "thunkRecursions"
 
 nonStrict :: TestNested
 nonStrict = testNested "nonStrict"
-    $ map (goldenPir (runQuote . NonStrict.compileNonStrictBindings False) pTerm)
+    $ map (goldenPir (runQuote . NonStrict.compileNonStrictBindings False))
     [ "nonStrict1"
     ]
 
 letFloat :: TestNested
 letFloat =
     testNested "letFloat"
-    $ map (goldenPirM goldenFloatTC pTerm)
+    $ map (goldenPirM goldenFloatTC)
   [ "letInLet"
   ,"listMatch"
   ,"maybe"
@@ -101,7 +100,7 @@ letFloat =
   ,"rhsSqueezeVsNest"
   ]
  where
-   goldenFloatTC pir = rethrow . asIfThrown @(PIR.Error PLC.DefaultUni PLC.DefaultFun ()) $ do
+   goldenFloatTC pir = rethrow . asIfThrown @(PIR.Error PLC.DefaultUni PLC.VCurrentDefaultFun ()) $ do
        let pirFloated = RecSplit.recSplit . LetFloat.floatTerm . runQuote $ PLC.rename pir
        -- make sure the floated result typechecks
        _ <- runQuoteT . flip inferType (() <$ pirFloated) =<< TC.getDefTypeCheckConfig ()
@@ -111,7 +110,7 @@ letFloat =
 recSplit :: TestNested
 recSplit =
     testNested "recSplit"
-    $ map (goldenPir (RecSplit.recSplit . runQuote . PLC.rename) pTerm)
+    $ map (goldenPir (RecSplit.recSplit . runQuote . PLC.rename))
   [
     "truenonrec"
   , "mutuallyRecursiveTypes"
@@ -131,7 +130,7 @@ instance Monoid SourcePos where
 inline :: TestNested
 inline =
     testNested "inline"
-    $ map (goldenPir (runQuote . (Inline.inline mempty <=< PLC.rename)) $ pTerm)
+    $ map (goldenPir (runQuote . (Inline.inline mempty <=< PLC.rename)) $)
     [ "var"
     , "builtin"
     , "constant"
@@ -144,7 +143,7 @@ inline =
 beta :: TestNested
 beta =
     testNested "beta"
-    $ map (goldenPir (Beta.beta . runQuote . PLC.rename) pTerm)
+    $ map (goldenPir (Beta.beta . runQuote . PLC.rename))
     [ "lamapp"
     , "absapp"
     , "multiapp"
@@ -154,7 +153,7 @@ beta =
 unwrapCancel :: TestNested
 unwrapCancel =
     testNested "unwrapCancel"
-    $ map (goldenPir Unwrap.unwrapCancel pTerm)
+    $ map (goldenPir Unwrap.unwrapCancel)
     -- Note: these examples don't typecheck, but we don't care
     [ "unwrapWrap"
     , "wrapUnwrap"
@@ -163,7 +162,7 @@ unwrapCancel =
 deadCode :: TestNested
 deadCode =
     testNested "deadCode"
-    $ map (goldenPir (runQuote . DeadCode.removeDeadBindings) pTerm)
+    $ map (goldenPir (runQuote . DeadCode.removeDeadBindings))
     [ "typeLet"
     , "termLet"
     , "strictLet"
@@ -185,7 +184,7 @@ deadCode =
 retainedSize :: TestNested
 retainedSize =
     testNested "retainedSize"
-    $ map (goldenPir renameAndAnnotate pTerm)
+    $ map (goldenPir renameAndAnnotate)
     [ "typeLet"
     , "termLet"
     , "strictLet"
@@ -216,7 +215,7 @@ retainedSize =
 rename :: TestNested
 rename =
     testNested "rename"
-    $ map (goldenPir (PLC.AttachPrettyConfig debugConfig . runQuote . PLC.rename) pTerm)
+    $ map (goldenPir (PLC.AttachPrettyConfig debugConfig . runQuote . PLC.rename))
     [ "allShadowedDataNonRec"
     , "allShadowedDataRec"
     , "paramShadowedDataNonRec"

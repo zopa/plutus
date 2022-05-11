@@ -144,48 +144,48 @@ rethrow :: ExceptT SomeException IO a -> IO a
 rethrow = fmap (either throw id) . runExceptT
 
 runTPlc
-    :: ToTPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToTPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => [a]
-    -> ExceptT SomeException IO (TPLC.EvaluationResult (TPLC.Term TPLC.TyName TPLC.Name TPLC.DefaultUni TPLC.DefaultFun ()))
+    -> ExceptT SomeException IO (TPLC.EvaluationResult (TPLC.Term TPLC.TyName TPLC.Name TPLC.DefaultUni TPLC.VCurrentDefaultFun ()))
 runTPlc values = do
     ps <- traverse toTPlc values
     let (TPLC.Program _ _ t) = foldl1 TPLC.applyProgram ps
-    liftEither $ first toException $ TPLC.extractEvaluationResult $ TPLC.evaluateCkNoEmit TPLC.defaultBuiltinsRuntime t
+    liftEither $ first toException $ TPLC.extractEvaluationResult $ TPLC.evaluateCkNoEmit TPLC.vdefaultBuiltinsRuntime t
 
 runUPlc
-    :: ToUPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToUPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => [a]
-    -> ExceptT SomeException IO (UPLC.EvaluationResult (UPLC.Term TPLC.Name TPLC.DefaultUni TPLC.DefaultFun ()))
+    -> ExceptT SomeException IO (UPLC.EvaluationResult (UPLC.Term TPLC.Name TPLC.DefaultUni TPLC.VCurrentDefaultFun ()))
 runUPlc values = do
     ps <- traverse toUPlc values
     let (UPLC.Program _ _ t) = foldl1 UPLC.applyProgram ps
-    liftEither $ first toException $ TPLC.extractEvaluationResult $ UPLC.evaluateCekNoEmit TPLC.defaultCekParameters t
+    liftEither $ first toException $ TPLC.extractEvaluationResult $ UPLC.evaluateCekNoEmit TPLC.vdefaultCekParameters t
 
 -- For golden tests of profiling.
-runUPlcProfile :: ToUPlc a TPLC.DefaultUni UPLC.DefaultFun =>
+runUPlcProfile :: ToUPlc a TPLC.DefaultUni UPLC.VCurrentDefaultFun =>
     [a]
     -> ExceptT
      SomeException
      IO
-     (UPLC.Term UPLC.Name TPLC.DefaultUni UPLC.DefaultFun (), [Text])
+     (UPLC.Term UPLC.Name TPLC.DefaultUni UPLC.VCurrentDefaultFun (), [Text])
 runUPlcProfile values = do
     ps <- traverse toUPlc values
     let (UPLC.Program _ _ t) = foldl1 UPLC.applyProgram ps
-        (result, logOut) = UPLC.evaluateCek UPLC.logEmitter TPLC.defaultCekParameters t
+        (result, logOut) = UPLC.evaluateCek UPLC.logEmitter TPLC.vdefaultCekParameters t
     res <- either (throwError . SomeException) pure result
     pure (res, logOut)
 
 -- For the profiling executable.
-runUPlcProfileExec :: ToUPlc a TPLC.DefaultUni UPLC.DefaultFun =>
+runUPlcProfileExec :: ToUPlc a TPLC.DefaultUni UPLC.VCurrentDefaultFun =>
     [a]
     -> ExceptT
      SomeException
      IO
-     (UPLC.Term UPLC.Name TPLC.DefaultUni UPLC.DefaultFun (), [Text])
+     (UPLC.Term UPLC.Name TPLC.DefaultUni UPLC.VCurrentDefaultFun (), [Text])
 runUPlcProfileExec values = do
     ps <- traverse toUPlc values
     let (UPLC.Program _ _ t) = foldl1 UPLC.applyProgram ps
-        (result, logOut) = UPLC.evaluateCek UPLC.logWithTimeEmitter TPLC.defaultCekParameters t
+        (result, logOut) = UPLC.evaluateCek UPLC.logWithTimeEmitter TPLC.vdefaultCekParameters t
     res <- either (throwError . SomeException) pure result
     pure (res, logOut)
 
@@ -196,56 +196,56 @@ ppThrow :: PrettyPlc a => ExceptT SomeException IO a -> IO (Doc ann)
 ppThrow value = rethrow $ prettyPlcClassicDebug <$> value
 
 goldenTPlc
-    :: ToTPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToTPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> a -> TestNested
 goldenTPlc name value = nestedGoldenVsDocM name $ ppThrow $ do
     p <- toTPlc value
     withExceptT @_ @FreeVariableError toException $ traverseOf TPLC.progTerm deBruijnTerm p
 
 goldenTPlcCatch
-    :: ToTPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToTPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> a -> TestNested
 goldenTPlcCatch name value = nestedGoldenVsDocM name $ ppCatch $ do
     p <- toTPlc value
     withExceptT @_ @FreeVariableError toException $ traverseOf TPLC.progTerm deBruijnTerm p
 
 goldenUPlc
-    :: ToUPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToUPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
      => String -> a -> TestNested
 goldenUPlc name value = nestedGoldenVsDocM name $ ppThrow $ do
     p <- toUPlc value
     withExceptT @_ @FreeVariableError toException $ traverseOf UPLC.progTerm UPLC.deBruijnTerm p
 
 goldenUPlcCatch
-    :: ToUPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToUPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> a -> TestNested
 goldenUPlcCatch name value = nestedGoldenVsDocM name $ ppCatch $ do
     p <- toUPlc value
     withExceptT @_ @FreeVariableError toException $ traverseOf UPLC.progTerm UPLC.deBruijnTerm p
 
 goldenTEval
-    :: ToTPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToTPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> [a] -> TestNested
 goldenTEval name values = nestedGoldenVsDocM name $ prettyPlcClassicDebug <$> (rethrow $ runTPlc values)
 
 goldenUEval
-    :: ToUPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToUPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> [a] -> TestNested
 goldenUEval name values = nestedGoldenVsDocM name $ prettyPlcClassicDebug <$> (rethrow $ runUPlc values)
 
 goldenTEvalCatch
-    :: ToTPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToTPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> [a] -> TestNested
 goldenTEvalCatch name values = nestedGoldenVsDocM name $ ppCatch $ runTPlc values
 
 goldenUEvalCatch
-    :: ToUPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToUPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> [a] -> TestNested
 goldenUEvalCatch name values = nestedGoldenVsDocM name $ ppCatch $ runUPlc values
 
 -- | Similar to @goldenUEval@ but with profiling turned on.
 goldenUEvalProfile
-    :: ToUPlc a TPLC.DefaultUni TPLC.DefaultFun
+    :: ToUPlc a TPLC.DefaultUni TPLC.VCurrentDefaultFun
     => String -> [a] -> TestNested
 goldenUEvalProfile name values = nestedGoldenVsDocM name $ pretty . view _2 <$> (rethrow $ runUPlcProfile values)
 

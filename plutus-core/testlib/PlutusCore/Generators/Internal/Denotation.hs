@@ -4,6 +4,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GADTs           #-}
 {-# LANGUAGE RankNTypes      #-}
+{-# LANGUAGE TypeApplications      #-}
 
 module PlutusCore.Generators.Internal.Denotation
     ( KnownType
@@ -26,6 +27,7 @@ import Data.Dependent.Map (DMap)
 import Data.Dependent.Map qualified as DMap
 import Data.Functor.Compose
 import Type.Reflection
+import Data.Coerce
 
 type KnownType val a = (KnownTypeAst (UniOf val) a, MakeKnown val a)
 
@@ -109,7 +111,7 @@ insertBuiltin
     -> DenotationContext (Term TyName Name DefaultUni DefaultFun ())
     -> DenotationContext (Term TyName Name DefaultUni DefaultFun ())
 insertBuiltin fun =
-    case toBuiltinMeaning fun of
+    case toBuiltinMeaning (coerce @_ @VCurrentDefaultFun fun) of
         BuiltinMeaning sch meta _ ->
             withTypeSchemeResult sch $ \tr ->
                 insertDenotation tr $ Denotation fun (Builtin ()) meta sch

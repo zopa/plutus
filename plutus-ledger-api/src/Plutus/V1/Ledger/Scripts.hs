@@ -65,10 +65,12 @@ import Control.Lens hiding (Context)
 import Control.Monad.Except (MonadError, throwError)
 import Data.ByteString.Lazy qualified as BSL
 import Data.String
+import Data.Coerce
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Bytes (LedgerBytes (..))
 import PlutusCore qualified as PLC
+import PlutusCore.Default qualified as PLC
 import PlutusCore.Data qualified as PLC
 import PlutusCore.Evaluation.Machine.ExBudget qualified as PLC
 import PlutusCore.Evaluation.Machine.Exception (ErrorWithCause (..), EvaluationError (..))
@@ -84,14 +86,14 @@ import UntypedPlutusCore.Check.Scope qualified as UPLC
 import UntypedPlutusCore.Evaluation.Machine.Cek qualified as UPLC
 
 -- | A script on the chain. This is an opaque type as far as the chain is concerned.
-newtype Script = Script { unScript :: UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun () }
+newtype Script = Script { unScript :: UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.VCurrentDefaultFun () }
   deriving stock (Generic)
   deriving anyclass (NFData)
   -- See Note [Using Flat inside CBOR instance of Script]
   -- Important to go via 'WithSizeLimits' to ensure we enforce the size limits for constants
   -- Currently, this is off because the old implementation didn't actually work, so we need to be careful
   -- about introducing a working version
-  deriving Serialise via (SerialiseViaFlat (UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun ()))
+  deriving Serialise via (SerialiseViaFlat (UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.VCurrentDefaultFun ()))
 
 {-| Note [Using Flat inside CBOR instance of Script]
 `plutus-ledger` uses CBOR for data serialisation and `plutus-core` uses Flat. The
@@ -146,8 +148,8 @@ fromCompiledCode :: CompiledCode a -> Script
 fromCompiledCode = Script . toNameless . getPlc
     where
       toNameless :: UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()
-                 -> UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun ()
-      toNameless = over UPLC.progTerm $ UPLC.termMapNames UPLC.unNameDeBruijn
+                 -> UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.VCurrentDefaultFun ()
+      toNameless = coerce . over UPLC.progTerm (UPLC.termMapNames UPLC.unNameDeBruijn)
 
 data ScriptError =
     EvaluationError [Text] Haskell.String -- ^ Expected behavior of the engine (e.g. user-provided error)
@@ -177,14 +179,14 @@ evaluateScript s =
 -- | Create an error message from the contents of an ErrorWithCause.
 -- If the cause of an error is a `Just t` where `t = b v0 v1 .. vn` for some builtin `b` then
 -- the error will be a "BuiltinEvaluationFailure" otherwise it will be `PLC.show evalError`
-mkError :: UPLC.CekUserError -> Maybe (UPLC.Term UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun ()) -> String
+mkError :: UPLC.CekUserError -> Maybe (UPLC.Term UPLC.NamedDeBruijn PLC.DefaultUni PLC.VCurrentDefaultFun ()) -> String
 mkError evalError Nothing = PLC.show evalError
 mkError evalError (Just t) =
   case findBuiltin t of
     Just b  -> "BuiltinEvaluationFailure of " ++ Haskell.show b
     Nothing -> PLC.show evalError
   where
-    findBuiltin :: UPLC.Term UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun () -> Maybe PLC.DefaultFun
+    findBuiltin :: UPLC.Term UPLC.NamedDeBruijn PLC.DefaultUni PLC.VCurrentDefaultFun () -> Maybe PLC.VCurrentDefaultFun
     findBuiltin t = case t of
        UPLC.Apply _ t _   -> findBuiltin t
        UPLC.Builtin _ fun -> Just fun

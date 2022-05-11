@@ -22,12 +22,12 @@ import PlutusCore.Builtin
 import PlutusCore.Evaluation.Machine.ExBudget
 import PlutusCore.Evaluation.Machine.Exception
 import PlutusCore.Pretty
+import PlutusCore.Evaluation.Machine.BuiltinCostModel
 
 import PlutusCore.StdLib.Data.ScottList qualified as Plc
 
 import Control.Exception
 import Data.Either
-import Data.Hashable (Hashable)
 import Data.Kind qualified as GHC (Type)
 import Data.Proxy
 import Data.Tuple
@@ -136,8 +136,8 @@ instance (ToBuiltinMeaning uni fun1, ToBuiltinMeaning uni fun2) =>
             BuiltinMeaning tySch toF (BuiltinRuntimeOptions runSch immF defF (toExF . snd))
 
 defBuiltinsRuntimeExt
-    :: HasConstantIn DefaultUni term
-    => BuiltinsRuntime (Either DefaultFun ExtensionFun) term
+    :: (HasConstantIn DefaultUni term)
+    => BuiltinsRuntime (Either VCurrentDefaultFun ExtensionFun) term
 defBuiltinsRuntimeExt = toBuiltinsRuntime defaultUnliftingMode (defaultBuiltinCostModel, ())
 
 data PlcListRep (a :: GHC.Type)

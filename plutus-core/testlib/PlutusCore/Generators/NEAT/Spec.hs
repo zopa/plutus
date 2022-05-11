@@ -103,7 +103,7 @@ not exploited.
 handleError :: Type TyName DefaultUni ()
        -> U.ErrorWithCause (U.EvaluationError user internal) term
        -> Either (U.ErrorWithCause (U.EvaluationError user internal) term)
-                 (Term TyName Name DefaultUni DefaultFun ())
+                 (Term TyName Name DefaultUni VCurrentDefaultFun ())
 handleError ty e = case U._ewcError e of
   U.UserEvaluationError     _ -> return (Error () ty)
   U.InternalEvaluationError _ -> throwError e
@@ -112,7 +112,7 @@ handleError ty e = case U._ewcError e of
 handleUError ::
           U.ErrorWithCause (U.EvaluationError user internal) term
        -> Either (U.ErrorWithCause (U.EvaluationError user internal) term)
-                 (U.Term Name DefaultUni DefaultFun ())
+                 (U.Term Name DefaultUni VCurrentDefaultFun ())
 handleUError e = case U._ewcError e of
   U.UserEvaluationError     _ -> return (U.Error ())
   U.InternalEvaluationError _ -> throwError e
@@ -134,7 +134,7 @@ prop_typePreservation tyG tmG = do
   -- Check if the converted term, when evaluated by CK, still has the same type:
 
   tmCK <- withExceptT CkP $ liftEither $
-    evaluateCkNoEmit defaultBuiltinsRuntime tm `catchError` handleError ty
+    evaluateCkNoEmit vdefaultBuiltinsRuntime tm `catchError` handleError ty
   withExceptT TypeError $ checkType tcConfig () tmCK (Normalized ty)
 
 -- |Property: check if both the typed CK and untyped CEK machines produce the same ouput
@@ -152,14 +152,14 @@ prop_agree_termEval tyG tmG = do
 
   -- run typed CK on input
   tmCk <- withExceptT CkP $ liftEither $
-    evaluateCkNoEmit defaultBuiltinsRuntime tm `catchError` handleError ty
+    evaluateCkNoEmit vdefaultBuiltinsRuntime tm `catchError` handleError ty
 
   -- erase CK output
   let tmUCk = U.erase tmCk
 
   -- run untyped CEK on erased input
   tmUCek <- withExceptT UCekP $ liftEither $
-    U.evaluateCekNoEmit defaultCekParameters (U.erase tm) `catchError` handleUError
+    U.evaluateCekNoEmit vdefaultCekParameters (U.erase tm) `catchError` handleUError
 
   -- check if typed CK and untyped CEK give the same output modulo erasure
   unless (tmUCk == tmUCek) $
@@ -248,14 +248,14 @@ data TestFail
   = GenError GenError
   | TypeError
     (TypeError
-      (Term TyName Name DefaultUni DefaultFun ())
+      (Term TyName Name DefaultUni VCurrentDefaultFun ())
       DefaultUni
-      DefaultFun
+      VCurrentDefaultFun
       ())
   | AgdaErrorP ()
   | FVErrorP FreeVariableError
-  | CkP (CkEvaluationException DefaultUni DefaultFun)
-  | UCekP (U.CekEvaluationException Name DefaultUni DefaultFun)
+  | CkP (CkEvaluationException DefaultUni VCurrentDefaultFun)
+  | UCekP (U.CekEvaluationException Name DefaultUni VCurrentDefaultFun)
   | Ctrex Ctrex
 
 data Ctrex
@@ -292,8 +292,8 @@ data Ctrex
   | CtrexTypePreservationFail
     ClosedTypeG
     ClosedTermG
-    (Term TyName Name DefaultUni DefaultFun ())
-    (Term TyName Name DefaultUni DefaultFun ())
+    (Term TyName Name DefaultUni VCurrentDefaultFun ())
+    (Term TyName Name DefaultUni VCurrentDefaultFun ())
   | CtrexTermEvaluationFail
     String
     ClosedTypeG
@@ -301,11 +301,11 @@ data Ctrex
   | CtrexTermEvaluationMismatch
     ClosedTypeG
     ClosedTermG
-    [(String,Term TyName Name DefaultUni DefaultFun ())]
+    [(String,Term TyName Name DefaultUni VCurrentDefaultFun ())]
   | CtrexUntypedTermEvaluationMismatch
     ClosedTypeG
     ClosedTermG
-    [(String,U.Term Name DefaultUni DefaultFun ())]
+    [(String,U.Term Name DefaultUni VCurrentDefaultFun ())]
 
 instance Show TestFail where
   show (TypeError e)  = "type error: " ++ show e

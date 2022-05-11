@@ -101,7 +101,7 @@ instance Eq a => Eq (TextualProgram a) where
 
 propFlat :: Property
 propFlat = property $ do
-    prog <- forAllPretty $ runAstGen genProgram
+    prog <- forAllPretty $ runAstGen (genProgram @DefaultFun)
     Hedgehog.tripping prog Flat.flat Flat.unflat
 
 -- | Asserts that an index serialized as a 'Natural' will deserialize as 'Word64'
@@ -125,7 +125,7 @@ natWordSerializationProp = Hedgehog.withTests 10000 $ property $ do
   and programs.  We have unit tests for the unit and boolean types, and property
   tests for the full set of types in the default universe. -}
 
-type DefaultError = Error DefaultUni DefaultFun SourcePos
+type VDefaultError = Error DefaultUni VCurrentDefaultFun SourcePos
 
 {-| Test that the parser can successfully consume the output from the
    prettyprinter for the unit and boolean types.  We use a unit test here
@@ -196,7 +196,7 @@ propParser = property $ do
         parseProg :: T.Text -> Either ParserErrorBundle (Program TyName Name DefaultUni DefaultFun SourcePos)
         parseProg p = runQuoteT $ parseProgram p
 
-type TestFunction = T.Text -> Either DefaultError T.Text
+type TestFunction = T.Text -> Either VDefaultError T.Text
 
 asIO :: TestFunction -> FilePath -> IO BSL.ByteString
 asIO f = fmap (either errorgen (BSL.fromStrict . encodeUtf8) . f) . readFile
