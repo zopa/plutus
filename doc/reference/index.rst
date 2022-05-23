@@ -6,8 +6,9 @@ Reference
    :titlesonly:
 
    common-weaknesses/index
+   language-changes
+   cost-model-parameters
    optimization
    examples
-   cost-model-parameters
    glossary
    bibliography
