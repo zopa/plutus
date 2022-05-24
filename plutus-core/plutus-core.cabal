@@ -251,7 +251,7 @@ library
         GHC.Natural.Extras
     build-depends:
         aeson -any,
-        algebraic-graphs >= 0.3,
+        -- algebraic-graphs >= 0.3,
         array -any,
         barbies -any,
         base >=4.9 && <5,
@@ -269,9 +269,9 @@ library
         deriving-aeson >= 0.2.3,
         deriving-compat -any,
         dlist -any,
-        dom-lt -any,
+        -- dom-lt -any,
         exceptions -any,
-        extra -any,
+        -- extra -any,
         filepath -any,
         flat -any,
         ghc-prim -any,
@@ -303,7 +303,7 @@ library
         time -any,
         transformers -any,
         unordered-containers -any,
-        witherable -any,
+        -- witherable -any,
         word-array -any,
         cardano-crypto-class -any,
         index-envs
