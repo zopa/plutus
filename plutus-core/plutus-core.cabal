@@ -276,7 +276,7 @@ library
         flat -any,
         ghc-prim -any,
         hashable,
-        hedgehog >=1.0 && < 1.1.1
+        hedgehog >=1.0 && < 1.1.1,
         int-cast -any,
         integer-gmp -any,
         lens -any,
