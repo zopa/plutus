@@ -259,7 +259,6 @@ library
         bytestring -any,
         cardano-crypto,
         cardano-crypto-class,
-        cardano-crypto-tests,
         cassava -any,
         cborg -any,
         composition-prelude >=1.1.0.1,
