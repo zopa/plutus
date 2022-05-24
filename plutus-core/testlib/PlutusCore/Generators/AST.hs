@@ -26,7 +26,7 @@ import Control.Monad.Morph (hoist)
 import Control.Monad.Reader
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Hedgehog hiding (Size, Var)
+import Hedgehog hiding (Size, Var, Rec)
 import Hedgehog.Internal.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 

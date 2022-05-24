@@ -276,7 +276,7 @@ library
         flat -any,
         ghc-prim -any,
         hashable,
-        hedgehog >=1.0,
+        hedgehog >=1.0 && < 1.1.1
         int-cast -any,
         integer-gmp -any,
         lens -any,
@@ -285,7 +285,7 @@ library
         monoidal-containers,
         mtl -any,
         parser-combinators >= 0.4.0,
-        prettyprinter >=1.1.0.1,
+        prettyprinter >=1.1.0.1 && < 1.7.1,
         prettyprinter-configurable -any,
         primitive -any,
         recursion-schemes -any,
@@ -351,14 +351,14 @@ library plutus-core-testlib
         mmorph -any,
         mtl -any,
         plutus-core -any,
-        prettyprinter >=1.1.0.1,
+        prettyprinter >=1.1.0.1 && < 1.7.1,
         prettyprinter-configurable -any,
         size-based -any,
         some < 1.0.3,
         Stream -any,
         tasty -any,
         tasty-golden -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog <= 1.1.0.0,
         tasty-hunit -any,
         text -any,
         transformers -any
@@ -410,7 +410,7 @@ test-suite plutus-core-test
         prettyprinter -any,
         tasty -any,
         tasty-golden -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog <= 1.1.0.0,
         tasty-hunit -any,
         text -any,
         transformers -any,
@@ -438,7 +438,7 @@ test-suite plutus-ir-test
         hedgehog -any,
         megaparsec -any,
         tasty -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog <= 1.1.0.0,
         text -any
 
 test-suite untyped-plutus-core-test
@@ -478,7 +478,7 @@ test-suite untyped-plutus-core-test
         secp256k1-haskell -any,
         tasty -any,
         tasty-golden -any,
-        tasty-hedgehog -any,
+        tasty-hedgehog <= 1.1.0.0,
         tasty-hunit -any,
         text -any
 
