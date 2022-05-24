@@ -304,7 +304,7 @@ library
         time -any,
         transformers -any,
         unordered-containers -any,
-        -- witherable -any,
+        witherable -any,
         word-array -any,
         cardano-crypto-class -any,
         index-envs
