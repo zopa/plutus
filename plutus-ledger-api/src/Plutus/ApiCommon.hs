@@ -1,6 +1,9 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
+
 
 -- GHC is asked to do quite a lot of optimization in this module, so we're increasing the amount of
 -- ticks for the simplifier not to run out of them.
@@ -30,12 +33,13 @@ import Control.Monad.Writer
 import Data.Bifunctor
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short
+import Data.Char (toLower)
 import Data.Coerce
 import Data.Either
 import Data.Foldable (fold)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Data.Text
+import Data.Text qualified as Text
 import Data.Tuple
 import GHC.Exts (inline)
 import GHC.Generics
@@ -202,7 +206,7 @@ instance Pretty EvaluationError where
     pretty CostModelParameterMismatch = "Cost model parameters were not as we expected"
 
 -- | The type of log output: just a list of 'Text'.
-type LogOutput = [Text]
+type LogOutput = [Text.Text]
 
 -- | A simple toggle indicating whether or not we should produce logs.
 data VerboseMode = Verbose | Quiet
@@ -268,11 +272,11 @@ data EvaluationContext = EvaluationContext
 
 {-|  Build the 'EvaluationContext'.
 
-The input is a `Map` of strings to cost integer values (aka `Plutus.CostModelParams`, `Alonzo.CostModel`)
+The input is a `Map` of `Text`s to cost integer values (aka `Plutus.CostModelParams`, `Alonzo.CostModel`)
 See Note [Inlining meanings of builtins].
 -}
-mkEvaluationContext :: MonadError CostModelApplyError m => Plutus.CostModelParams -> m EvaluationContext
-mkEvaluationContext newCMP =
+mkDynEvaluationContext :: MonadError CostModelApplyError m => Plutus.CostModelParams -> m EvaluationContext
+mkDynEvaluationContext newCMP =
     EvaluationContext
         <$> inline mkMachineParametersFor UnliftingImmediate newCMP
         <*> inline mkMachineParametersFor UnliftingDeferred newCMP
@@ -343,3 +347,52 @@ evaluateScriptCounting lv pv verbose ectx p args = swap $ runWriter @LogOutput $
     tell logs
     liftEither $ first CekError $ void res
     pure final
+
+
+{-| A valid parameter name has to be enumeration, bounded, ordered, and
+prettyprintable in a "lowerKebab" way.
+
+Each API version should expose such an enumeration as an ADT and create
+an instance of ParamName out of it.
+-}
+class (Enum a, Ord a, Bounded a) => IsParamName a where
+   showParamName :: a -> String
+   default showParamName :: (Generic a, GIsParamName (Rep a)) => a -> String
+   showParamName = gshowParamName . from
+
+-- | A datatype-generic class to prettyprint 'sums of nullary constructors' in lower-kebab syntax.
+class GIsParamName f where
+    gshowParamName :: f p -> String
+
+instance (GIsParamName a) => GIsParamName (M1 D i a) where
+    gshowParamName (M1 x) = gshowParamName x
+
+instance Constructor i => GIsParamName (M1 C i U1) where
+    gshowParamName = lowerKebab . conName
+      where
+        lowerKebab :: String -> String
+        lowerKebab (h:t) = toLower h : fmap (\c -> if c == '\''
+                                                  then '-'
+                                                  else c
+                                               ) t
+        lowerKebab _ = error "this should not happen"
+
+instance (GIsParamName a, GIsParamName b) => GIsParamName ((:+:) a b) where
+    gshowParamName (L1 x) = gshowParamName x
+    gshowParamName (R1 x) = gshowParamName x
+
+-- | Return all param names given a specific datatype (enumeration).
+enumParamNames :: IsParamName k => [k]
+enumParamNames = [minBound..maxBound]
+
+-- | Tag some costparameter values that arrived from the ledger, as a specific ParamName version.
+tagWithParamNames :: IsParamName k => [Integer] -> [(k, Integer)]
+tagWithParamNames =
+    -- FIXME: since ledger gives always the full list of values, perhaps we should be more
+    -- strict here than the always-succeeding `zip`.
+    Prelude.zip enumParamNames
+
+-- | Essentially untag the association of param names to values
+-- so that CostModelInterface can make use of it.
+toCostModelParams :: IsParamName k => [(k, Integer)] -> CostModelParams
+toCostModelParams = Map.fromList . fmap (first $ Text.pack . showParamName)
